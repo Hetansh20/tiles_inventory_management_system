@@ -3,8 +3,6 @@ import {
   Bar,
   BarChart,
   Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -84,26 +82,35 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard title="Total Tiles" value={tiles.length} icon={FiLayers} hint="Active SKUs cataloged" tone="sky" />
-        <StatCard title="Total Stock" value={totalStock} icon={FiArchive} hint="Units across warehouses" tone="emerald" />
-        <StatCard title="Low Stock Alerts" value={lowStockCount} icon={FiAlertTriangle} hint="Needs replenishment" tone="amber" />
-        <StatCard title="Suppliers" value={suppliers.length} icon={FiTruck} hint="Approved vendors" tone="sky" />
-        <StatCard title="Warehouses" value={warehouses.length} icon={FiMapPin} hint="Storage locations" tone="emerald" />
+      <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="sm:col-span-2">
+          <StatCard title="Total Stock" value={totalStock} icon={FiArchive} hint="Cumulative units across all active warehouses" tone="sky" />
+        </div>
+        <StatCard title="Low Stock Alerts" value={lowStockCount} icon={FiAlertTriangle} hint="Needs immediate replenishment" tone="rose" />
+        <StatCard title="Total Tiles" value={tiles.length} icon={FiLayers} hint="Active SKUs cataloged" tone="emerald" />
+        <StatCard title="Suppliers" value={suppliers.length} icon={FiTruck} hint="Approved vendor network" tone="amber" />
+        <StatCard title="Warehouses" value={warehouses.length} icon={FiMapPin} hint="Active storage locations" tone="sky" />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
         <ChartCard title="Stock Distribution by Category">
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={stockByCategory} dataKey="value" nameKey="name" outerRadius={90} label>
+              <BarChart layout="vertical" data={stockByCategory} margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#475569" opacity={0.2} />
+                <XAxis type="number" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis dataKey="name" type="category" tick={{ fill: "#64748b", fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} width={80} />
+                <Tooltip 
+                  cursor={{fill: 'rgba(255,255,255,0.05)'}} 
+                  contentStyle={{ background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: '12px', backdropFilter: 'blur(8px)', color: '#fff', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)' }} 
+                  itemStyle={{ color: "#38bdf8", fontWeight: 'bold' }} 
+                />
+                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                   {stockByCategory.map((item, index) => (
                     <Cell key={`${item.name}-${index}`} fill={palette[index % palette.length]} />
                   ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
@@ -115,7 +122,11 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
                 <CartesianGrid strokeDasharray="3 3" stroke="#475569" opacity={0.35} />
                 <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={{ stroke: "#475569" }} />
                 <YAxis tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={{ stroke: "#475569" }} />
-                <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 10 }} labelStyle={{ color: "#e2e8f0" }} itemStyle={{ color: "#cbd5e1" }} />
+                <Tooltip 
+                  cursor={{fill: 'rgba(255,255,255,0.05)'}} 
+                  contentStyle={{ background: "rgba(15, 23, 42, 0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: '12px', backdropFilter: 'blur(8px)', color: '#fff', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)' }} 
+                  itemStyle={{ color: "#38bdf8", fontWeight: 'bold' }} 
+                />
                 <Bar dataKey="stockIn" fill="#22c55e" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="stockOut" fill="#f59e0b" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -130,24 +141,25 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
           <DataTable columns={recentColumns} data={[...transactions].sort((a, b) => b.date.localeCompare(a.date))} pageSize={5} />
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Top Selling Tiles</h3>
-            <div className="space-y-2">
+        <div className="space-y-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/40 bg-gradient-to-br from-indigo-500/10 to-purple-500/5 p-5 shadow-lg backdrop-blur-md transition-all dark:border-slate-700/50 dark:bg-slate-900/50">
+            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-500/20 blur-3xl" />
+            <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Top Selling Tiles</h3>
+            <div className="space-y-3 relative z-10">
               {topSelling.length ? (
                 topSelling.map((item) => (
-                  <div key={item.tileId} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{item.name}</p>
-                    <StatusBadge label={`${item.quantity} sold`} tone="info" />
+                  <div key={item.tileId} className="group flex items-center justify-between rounded-xl bg-white/60 px-4 py-3 shadow-sm backdrop-blur-md transition-all hover:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-800">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{item.name}</p>
+                    <StatusBadge label={`${item.quantity} units`} tone="info" />
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-300">No sales activity yet.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">No sales activity yet.</p>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="rounded-2xl border border-white/40 bg-white/60 p-5 shadow-lg backdrop-blur-md transition-all dark:border-slate-700/50 dark:bg-slate-900/50">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Low Stock Alerts</h2>
               <StatusBadge label={`${activeAlerts.length} open`} tone={activeAlerts.length ? "danger" : "success"} />

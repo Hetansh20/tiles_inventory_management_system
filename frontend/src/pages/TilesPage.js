@@ -5,6 +5,7 @@ import FormModal from "../components/FormModal";
 import SearchBar from "../components/SearchBar";
 import StatusBadge from "../components/StatusBadge";
 import PermissionBanner from "../components/PermissionBanner";
+import Button from "../components/Button";
 import useDebounce from "../hooks/useDebounce";
 import { exportToCsv, exportToExcel } from "../utils/exportUtils";
 
@@ -40,6 +41,7 @@ export default function TilesPage({
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
   const [selectedRows, setSelectedRows] = useState([]);
+  const [sortBy, setSortBy] = useState("name_asc");
 
   const debouncedQuery = useDebounce(query, 250);
 
@@ -48,15 +50,23 @@ export default function TilesPage({
   const materials = uniq(tiles.map((tile) => tile.material));
 
   const filtered = useMemo(
-    () =>
-      tiles.filter((tile) => {
+    () => {
+      let result = tiles.filter((tile) => {
         const matchesQuery = `${tile.name} ${tile.sku}`.toLowerCase().includes(debouncedQuery.toLowerCase());
         const matchesCategory = category === "all" || tile.category === category;
         const matchesBrand = brand === "all" || tile.brand === brand;
         const matchesMaterial = material === "all" || tile.material === material;
         return matchesQuery && matchesCategory && matchesBrand && matchesMaterial;
-      }),
-    [tiles, debouncedQuery, category, brand, material]
+      });
+      
+      if (sortBy === "name_asc") result.sort((a, b) => a.name.localeCompare(b.name));
+      else if (sortBy === "name_desc") result.sort((a, b) => b.name.localeCompare(a.name));
+      else if (sortBy === "price_asc") result.sort((a, b) => a.unitPrice - b.unitPrice);
+      else if (sortBy === "price_desc") result.sort((a, b) => b.unitPrice - a.unitPrice);
+
+      return result;
+    },
+    [tiles, debouncedQuery, category, brand, material, sortBy]
   );
 
   const columns = [
@@ -79,7 +89,7 @@ export default function TilesPage({
           <button
             type="button"
             disabled={!canEdit}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 transition dark:border-slate-600 dark:hover:bg-slate-700 disabled:opacity-40"
             onClick={() => openEditModal(row)}
           >
             Edit
@@ -87,7 +97,7 @@ export default function TilesPage({
           <button
             type="button"
             disabled={!canEdit}
-            className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-40 ${row.isActive ? "bg-rose-500 hover:bg-rose-600 shadow-rose-500/20" : "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"} shadow-lg`}
             onClick={() => toggleTileStatus(row.id)}
           >
             {row.isActive ? "Disable" : "Enable"}
@@ -166,30 +176,28 @@ export default function TilesPage({
           <FilterDropdown label="Category" value={category} onChange={setCategory} options={toOptions(categories)} />
           <FilterDropdown label="Brand" value={brand} onChange={setBrand} options={toOptions(brands)} />
           <FilterDropdown label="Material" value={material} onChange={setMaterial} options={toOptions(materials)} />
+          <FilterDropdown 
+            label="Sort By" 
+            value={sortBy} 
+            onChange={setSortBy} 
+            options={[
+              { label: "Name A-Z", value: "name_asc" },
+              { label: "Name Z-A", value: "name_desc" },
+              { label: "Price Low-High", value: "price_asc" },
+              { label: "Price High-Low", value: "price_desc" }
+            ]} 
+          />
         </div>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => exportToCsv("tiles-report", exportRows)}
-            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold"
-          >
+          <Button variant="secondary" onClick={() => exportToCsv("tiles-report", exportRows)}>
             CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => exportToExcel("tiles-report", exportRows, "Tiles")}
-            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold"
-          >
+          </Button>
+          <Button variant="secondary" onClick={() => exportToExcel("tiles-report", exportRows, "Tiles")}>
             Excel
-          </button>
-          <button
-            type="button"
-            disabled={!canEdit}
-            onClick={openCreateModal}
-            className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sky-700 disabled:opacity-40"
-          >
+          </Button>
+          <Button variant="primary" disabled={!canEdit} onClick={openCreateModal}>
             Add Tile
-          </button>
+          </Button>
         </div>
       </div>
 
