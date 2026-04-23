@@ -222,6 +222,8 @@ function AppShell() {
                           transactions={transactions}
                           alerts={alerts}
                           resolveAlert={resolveAlert}
+                          orders={orders}
+                          currentUser={currentUser}
                         />
                       }
                     />

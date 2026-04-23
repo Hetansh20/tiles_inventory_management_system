@@ -18,9 +18,10 @@ import StatusBadge from "../components/StatusBadge";
 
 const palette = ["#0ea5e9", "#14b8a6", "#f59e0b", "#f43f5e", "#6366f1", "#22c55e"];
 
-export default function DashboardPage({ tiles, inventory, suppliers, warehouses, transactions, alerts, resolveAlert }) {
-  const totalStock = inventory.reduce((sum, item) => sum + item.quantityInStock, 0);
+export default function DashboardPage({ tiles, inventory, suppliers, warehouses, transactions, alerts, resolveAlert, orders, currentUser }) {
   const lowStockCount = inventory.filter((item) => item.quantityInStock <= item.reorderLevel).length;
+  const pendingOrdersCount = orders?.filter((o) => o.status === "pending").length || 0;
+  const totalStockValue = inventory.reduce((sum, item) => sum + (item.quantityInStock * (tiles.find(t=>t.id===item.tileId)?.unitPrice || 0)), 0);
   const activeAlerts = alerts.filter((alert) => alert.status === "open");
 
   const stockByCategory = useMemo(() => {
@@ -83,13 +84,15 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
   return (
     <div className="space-y-6">
       <section className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="sm:col-span-2">
-          <StatCard title="Total Stock" value={totalStock} icon={FiArchive} hint="Cumulative units across all active warehouses" tone="sky" />
-        </div>
-        <StatCard title="Low Stock Alerts" value={lowStockCount} icon={FiAlertTriangle} hint="Needs immediate replenishment" tone="rose" />
-        <StatCard title="Total Tiles" value={tiles.length} icon={FiLayers} hint="Active SKUs cataloged" tone="emerald" />
-        <StatCard title="Suppliers" value={suppliers.length} icon={FiTruck} hint="Approved vendor network" tone="amber" />
-        <StatCard title="Warehouses" value={warehouses.length} icon={FiMapPin} hint="Active storage locations" tone="sky" />
+        <StatCard title="Total Products" value={tiles.length} icon={FiLayers} hint="Active SKUs cataloged" tone="emerald" />
+        <StatCard title="Low-Stock Items" value={lowStockCount} icon={FiAlertTriangle} hint="Below reorder threshold" tone="rose" />
+        
+        {currentUser?.role === "admin" && (
+          <>
+            <StatCard title="Pending Purchase Orders" value={pendingOrdersCount} icon={FiTruck} hint="Awaiting delivery" tone="amber" />
+            <StatCard title="Total Stock Value" value={`Rs ${totalStockValue.toLocaleString()}`} icon={FiArchive} hint="Current gross value" tone="sky" />
+          </>
+        )}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
@@ -137,8 +140,8 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
 
       <section className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Recent Stock Transactions</h2>
-          <DataTable columns={recentColumns} data={[...transactions].sort((a, b) => b.date.localeCompare(a.date))} pageSize={5} />
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Recent Stock Movements</h2>
+          <DataTable columns={recentColumns} data={[...transactions].sort((a, b) => b.date.localeCompare(a.date))} pageSize={10} />
         </div>
 
         <div className="space-y-6">
