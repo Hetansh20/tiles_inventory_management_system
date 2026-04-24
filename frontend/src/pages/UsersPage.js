@@ -8,7 +8,7 @@ import SearchBar from "../components/SearchBar";
 import StatusBadge from "../components/StatusBadge";
 import useDebounce from "../hooks/useDebounce";
 
-const defaultForm = { name: "", email: "", role: "staff", isActive: true };
+const defaultForm = { name: "", email: "", role: "staff", isActive: true, permissions: [] };
 
 export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }) {
   const [query, setQuery] = useState("");
@@ -41,6 +41,11 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
       key: "isActive",
       header: "Status",
       render: (row) => <StatusBadge label={row.isActive ? "Active" : "Inactive"} tone={row.isActive ? "success" : "danger"} />,
+    },
+    {
+      key: "permissions",
+      header: "Permissions",
+      render: (row) => row.permissions?.join(", ") || "None",
     },
     {
       key: "actions",
@@ -76,7 +81,7 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
 
   const openEditModal = (user) => {
     setEditingUser(user);
-    setForm({ ...user });
+    setForm({ ...user, permissions: user.permissions || [] });
     setModalOpen(true);
   };
 
@@ -156,6 +161,22 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
               onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
             />
             Active user
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input
+              type="checkbox"
+              checked={form.permissions.includes("inventory")}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setForm((prev) => {
+                  const newPermissions = checked 
+                    ? [...(prev.permissions || []), "inventory"]
+                    : (prev.permissions || []).filter(p => p !== "inventory");
+                  return { ...prev, permissions: newPermissions };
+                });
+              }}
+            />
+            Can record inventory movements
           </label>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2">

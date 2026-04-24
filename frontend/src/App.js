@@ -16,7 +16,7 @@ const OrdersPage = lazy(() => import("./pages/OrdersPage"));
 const SuppliersPage = lazy(() => import("./pages/SuppliersPage"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
 const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
-const TransactionsPage = lazy(() => import("./pages/TransactionsPage"));
+const StockMovementsPage = lazy(() => import("./pages/StockMovementsPage"));
 const TransfersPage = lazy(() => import("./pages/TransfersPage"));
 const UsersPage = lazy(() => import("./pages/UsersPage"));
 const WarehousesPage = lazy(() => import("./pages/WarehousesPage"));
@@ -43,7 +43,7 @@ function AppShell() {
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [inventory, setInventory] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  const [movements, setMovements] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -52,14 +52,16 @@ function AppShell() {
     const fetchInitialData = async () => {
       try {
         if (isAuthenticated) {
-          const [fetchedUsers, fetchedProducts, fetchedCategories] = await Promise.all([
+          const [fetchedUsers, fetchedProducts, fetchedCategories, fetchedMovements] = await Promise.all([
             canEdit ? apiCall("/users").catch(()=>[]) : Promise.resolve([]),
             apiCall("/products").catch(()=>[]),
-            apiCall("/categories").catch(()=>[])
+            apiCall("/categories").catch(()=>[]),
+            apiCall("/movements").catch(()=>[])
           ]);
           if (canEdit) setUsers(fetchedUsers.map(u => ({ ...u, id: u._id })));
           setProducts(fetchedProducts.map(p => ({ ...p, id: p._id })));
           setCategories(fetchedCategories.map(c => ({ ...c, id: c._id })));
+          setMovements(fetchedMovements.map(m => ({ ...m, id: m._id })));
         }
       } catch (e) {
         console.error("Failed to fetch initial data", e);
@@ -164,9 +166,29 @@ function AppShell() {
     setWarehouses((prev) => upsert(prev, warehouse));
     toast.success("Warehouse saved successfully");
   };
-  const saveTransaction = (transaction) => {
-    setTransactions((prev) => upsert(prev, { ...transaction, performedBy: currentUser?.name || "System" }));
-    toast.info("Transaction recorded");
+  const saveMovement = async (movement) => {
+    try {
+      const created = await apiCall("/movements", {
+        method: "POST",
+        body: JSON.stringify(movement)
+      });
+      setMovements((prev) => [created, ...prev]);
+      
+      // Also update the local product quantity so UI reflects it immediately
+      setProducts(prev => prev.map(p => {
+        if (p.id === movement.product) {
+          let delta = Number(movement.quantity);
+          if (movement.type === 'OUT') delta = -Math.abs(delta);
+          else if (movement.type === 'IN') delta = Math.abs(delta);
+          return { ...p, currentQuantity: p.currentQuantity + delta };
+        }
+        return p;
+      }));
+      
+      toast.success("Stock movement recorded");
+    } catch (e) {
+      toast.error(e.message || "Failed to record movement");
+    }
   };
   const saveTransfer = (transfer) => {
     setTransfers((prev) => upsert(prev, transfer));
@@ -250,7 +272,7 @@ function AppShell() {
                   onLogout={logout}
                   currentUser={currentUser}
                   alerts={alerts}
-                  transactions={transactions}
+                  transactions={movements}
                   searchData={searchData}
                   theme={theme}
                   onToggleTheme={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
@@ -264,7 +286,7 @@ function AppShell() {
                           inventory={inventory}
                           suppliers={suppliers}
                           warehouses={warehouses}
-                          transactions={transactions}
+                          transactions={movements}
                           alerts={alerts}
                           resolveAlert={resolveAlert}
                           orders={orders}
@@ -321,10 +343,10 @@ function AppShell() {
                     <Route
                       path="/transactions"
                       element={
-                        <TransactionsPage
-                          transactions={transactions}
-                          tiles={products}
-                          saveTransaction={saveTransaction}
+                        <StockMovementsPage
+                          movements={movements}
+                          products={products}
+                          saveMovement={saveMovement}
                           canDoTransactions={canDoTransactions}
                         />
                       }
@@ -356,7 +378,7 @@ function AppShell() {
                       }
                     />
                     <Route path="/alerts" element={<AlertsPage alerts={alerts} tiles={products} warehouses={warehouses} resolveAlert={resolveAlert} canEdit={canEdit} />} />
-                    <Route path="/activity" element={<ActivityLogsPage transactions={transactions} />} />
+                    <Route path="/activity" element={<ActivityLogsPage transactions={movements} />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </PageLayout>

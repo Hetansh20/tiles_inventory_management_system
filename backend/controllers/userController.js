@@ -22,7 +22,8 @@ const toggleUserStatus = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
-        isActive: updatedUser.isActive
+        isActive: updatedUser.isActive,
+        permissions: updatedUser.permissions
       })
     } else {
       res.status(404).json({ message: 'User not found' })
@@ -34,7 +35,7 @@ const toggleUserStatus = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, isActive } = req.body
+    const { name, email, password, role, isActive, permissions } = req.body
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
@@ -48,7 +49,8 @@ const createUser = async (req, res) => {
       email,
       password: hashedPassword,
       role: role || 'staff',
-      isActive: isActive !== undefined ? isActive : true
+      isActive: isActive !== undefined ? isActive : true,
+      permissions: permissions || []
     })
 
     res.status(201).json({
@@ -56,7 +58,8 @@ const createUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      isActive: user.isActive
+      isActive: user.isActive,
+      permissions: user.permissions
     })
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -74,6 +77,9 @@ const updateUser = async (req, res) => {
       if (req.body.isActive !== undefined) {
         user.isActive = req.body.isActive
       }
+      if (req.body.permissions !== undefined) {
+        user.permissions = req.body.permissions
+      }
       
       if (req.body.password) {
         user.password = await bcrypt.hash(req.body.password, 10)
@@ -86,7 +92,8 @@ const updateUser = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
-        isActive: updatedUser.isActive
+        isActive: updatedUser.isActive,
+        permissions: updatedUser.permissions
       })
     } else {
       res.status(404).json({ message: 'User not found' })

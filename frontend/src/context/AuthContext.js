@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
       login,
       logout,
       canEdit: currentUser?.role === "admin",
-      canDoTransactions: currentUser?.role === "admin" || currentUser?.role === "staff",
+      canDoTransactions: currentUser?.role === "admin" || currentUser?.permissions?.includes("inventory"),
     }),
     [currentUser]
   );
