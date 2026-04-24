@@ -21,7 +21,7 @@ const palette = ["#0ea5e9", "#14b8a6", "#f59e0b", "#f43f5e", "#6366f1", "#22c55e
 export default function DashboardPage({ tiles, inventory, suppliers, warehouses, transactions, alerts, resolveAlert, orders, currentUser }) {
   const lowStockCount = inventory.filter((item) => item.quantityInStock <= item.reorderLevel).length;
   const pendingOrdersCount = orders?.filter((o) => o.status === "pending").length || 0;
-  const totalStockValue = inventory.reduce((sum, item) => sum + (item.quantityInStock * (tiles.find(t=>t.id===item.tileId)?.unitPrice || 0)), 0);
+  const totalStockValue = inventory.reduce((sum, item) => sum + (item.quantityInStock * (tiles.find(t=>t.id===item.tileId)?.costPrice || 0)), 0);
   const activeAlerts = alerts.filter((alert) => alert.status === "open");
 
   const stockByCategory = useMemo(() => {

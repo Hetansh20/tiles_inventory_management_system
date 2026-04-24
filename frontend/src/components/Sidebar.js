@@ -11,12 +11,14 @@ import {
   FiTruck,
   FiUsers,
   FiActivity,
+  FiLayers,
   FiClock,
 } from "react-icons/fi";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: FiGrid, roles: ["admin", "staff"] },
-  { path: "/tiles", label: "Tiles", icon: FiBox, roles: ["admin", "staff"] },
+  { path: "/products", label: "Products", icon: FiBox, roles: ["admin", "staff"] },
+  { path: "/categories", label: "Categories", icon: FiLayers, roles: ["admin", "staff"] },
   { path: "/inventory", label: "Inventory", icon: FiActivity, roles: ["admin", "staff"] },
   { path: "/suppliers", label: "Suppliers", icon: FiTruck, roles: ["admin", "staff"] },
   { path: "/warehouses", label: "Warehouses", icon: FiMapPin, roles: ["admin", "staff"] },

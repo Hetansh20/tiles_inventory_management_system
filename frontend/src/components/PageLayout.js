@@ -6,7 +6,8 @@ import GlobalSearchModal from "./GlobalSearchModal";
 
 const meta = {
   "/dashboard": { title: "Dashboard", subtitle: "Inventory and stock performance overview" },
-  "/tiles": { title: "Tiles", subtitle: "Manage SKUs, attributes, and lifecycle status" },
+  "/products": { title: "Products", subtitle: "Manage products, attributes, and lifecycle status" },
+  "/categories": { title: "Categories", subtitle: "Manage product taxonomy" },
   "/inventory": { title: "Inventory", subtitle: "Monitor stock levels by warehouse" },
   "/suppliers": { title: "Suppliers", subtitle: "Supplier contact and profile management" },
   "/warehouses": { title: "Warehouses", subtitle: "Warehouse list and operations context" },
@@ -35,11 +36,11 @@ export default function PageLayout({ children, onLogout, currentUser, alerts, tr
     const q = searchQuery.toLowerCase().trim();
     const groups = [
       {
-        type: "Tiles",
-        items: searchData.tiles
-          .filter((tile) => !q || `${tile.name} ${tile.sku}`.toLowerCase().includes(q))
+        type: "Products",
+        items: searchData.products
+          .filter((product) => !q || `${product.name} ${product.sku}`.toLowerCase().includes(q))
           .slice(0, 5)
-          .map((tile) => ({ id: tile.id, title: tile.name, subtitle: tile.sku })),
+          .map((product) => ({ id: product.id, title: product.name, subtitle: product.sku })),
       },
       {
         type: "Suppliers",

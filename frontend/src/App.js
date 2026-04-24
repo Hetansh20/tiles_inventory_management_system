@@ -14,7 +14,8 @@ const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const OrdersPage = lazy(() => import("./pages/OrdersPage"));
 const SuppliersPage = lazy(() => import("./pages/SuppliersPage"));
-const TilesPage = lazy(() => import("./pages/TilesPage"));
+const ProductsPage = lazy(() => import("./pages/ProductsPage"));
+const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
 const TransactionsPage = lazy(() => import("./pages/TransactionsPage"));
 const TransfersPage = lazy(() => import("./pages/TransfersPage"));
 const UsersPage = lazy(() => import("./pages/UsersPage"));
@@ -37,7 +38,8 @@ function AppShell() {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
 
   const [users, setUsers] = useState([]);
-  const [tiles, setTiles] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -49,12 +51,18 @@ function AppShell() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        if (isAuthenticated && canEdit) {
-          const fetchedUsers = await apiCall("/users");
-          setUsers(fetchedUsers.map(u => ({ ...u, id: u._id })));
+        if (isAuthenticated) {
+          const [fetchedUsers, fetchedProducts, fetchedCategories] = await Promise.all([
+            canEdit ? apiCall("/users").catch(()=>[]) : Promise.resolve([]),
+            apiCall("/products").catch(()=>[]),
+            apiCall("/categories").catch(()=>[])
+          ]);
+          if (canEdit) setUsers(fetchedUsers.map(u => ({ ...u, id: u._id })));
+          setProducts(fetchedProducts.map(p => ({ ...p, id: p._id })));
+          setCategories(fetchedCategories.map(c => ({ ...c, id: c._id })));
         }
       } catch (e) {
-        console.error("Failed to fetch users", e);
+        console.error("Failed to fetch initial data", e);
       } finally {
         setBooting(false);
       }
@@ -74,7 +82,7 @@ function AppShell() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const searchData = useMemo(() => ({ tiles, suppliers, warehouses }), [tiles, suppliers, warehouses]);
+  const searchData = useMemo(() => ({ products, suppliers, warehouses }), [products, suppliers, warehouses]);
 
   const saveUser = async (user) => {
     try {
@@ -97,9 +105,56 @@ function AppShell() {
       toast.error(error.message || "Failed to save user");
     }
   };
-  const saveTile = (tile) => {
-    setTiles((prev) => upsert(prev, tile));
-    toast.success("Tile saved successfully");
+  const saveCategory = async (category) => {
+    try {
+      if (category.id) {
+        const updated = await apiCall(`/categories/${category.id}`, { method: "PUT", body: JSON.stringify(category) });
+        setCategories((prev) => prev.map((item) => (item.id === updated._id ? { ...updated, id: updated._id } : item)));
+        toast.success("Category updated");
+      } else {
+        const created = await apiCall(`/categories`, { method: "POST", body: JSON.stringify(category) });
+        setCategories((prev) => [...prev, { ...created, id: created._id }]);
+        toast.success("Category created");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to save category");
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      await apiCall(`/categories/${id}`, { method: "DELETE" });
+      setCategories((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Category deleted");
+    } catch (error) {
+      toast.error(error.message || "Failed to delete category");
+    }
+  };
+
+  const saveProduct = async (product) => {
+    try {
+      if (product.id) {
+        const updated = await apiCall(`/products/${product.id}`, { method: "PUT", body: JSON.stringify(product) });
+        setProducts((prev) => prev.map((item) => (item.id === updated._id ? { ...updated, id: updated._id } : item)));
+        toast.success("Product updated");
+      } else {
+        const created = await apiCall(`/products`, { method: "POST", body: JSON.stringify(product) });
+        setProducts((prev) => [...prev, { ...created, id: created._id }]);
+        toast.success("Product created");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to save product");
+    }
+  };
+
+  const toggleProductStatus = async (id) => {
+    try {
+      const updated = await apiCall(`/products/${id}/toggle-status`, { method: "PUT" });
+      setProducts((prev) => prev.map((item) => (item.id === updated._id ? { ...updated, id: updated._id } : item)));
+      toast.info("Product status toggled");
+    } catch (e) {
+      toast.error("Failed to toggle status");
+    }
   };
   const saveSupplier = (supplier) => {
     setSuppliers((prev) => upsert(prev, supplier));
@@ -132,9 +187,7 @@ function AppShell() {
     }
   };
 
-  const toggleTileStatus = (id) => {
-    setTiles((prev) => prev.map((item) => (item.id === id ? { ...item, isActive: !item.isActive } : item)));
-  };
+
 
   const updateTransferStatus = (id, status) => {
     setTransfers((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
@@ -149,15 +202,7 @@ function AppShell() {
     toast.warning("Alert marked as resolved");
   };
 
-  const bulkDeleteTiles = (ids) => {
-    setTiles((prev) => prev.filter((item) => !ids.includes(item.id)));
-    toast.success(`${ids.length} tiles deleted`);
-  };
 
-  const bulkToggleTiles = (ids, active) => {
-    setTiles((prev) => prev.map((item) => (ids.includes(item.id) ? { ...item, isActive: active } : item)));
-    toast.success(`${ids.length} tiles updated`);
-  };
 
   const bulkInventoryUpdate = (ids, delta) => {
     setInventory((prev) => prev.map((item) => (ids.includes(item.id) ? { ...item, quantityInStock: Math.max(0, item.quantityInStock + delta) } : item)));
@@ -215,7 +260,7 @@ function AppShell() {
                       path="/dashboard"
                       element={
                         <DashboardPage
-                          tiles={tiles}
+                          tiles={products}
                           inventory={inventory}
                           suppliers={suppliers}
                           warehouses={warehouses}
@@ -236,16 +281,26 @@ function AppShell() {
                       }
                     />
                     <Route
-                      path="/tiles"
+                      path="/categories"
                       element={
-                        <TilesPage
-                          tiles={tiles}
-                          suppliers={suppliers}
-                          saveTile={saveTile}
-                          toggleTileStatus={toggleTileStatus}
+                        <CategoriesPage
+                          categories={categories}
+                          saveCategory={saveCategory}
+                          deleteCategory={deleteCategory}
                           canEdit={canEdit}
-                          bulkDeleteTiles={bulkDeleteTiles}
-                          bulkToggleTiles={bulkToggleTiles}
+                        />
+                      }
+                    />
+                    <Route
+                      path="/products"
+                      element={
+                        <ProductsPage
+                          products={products}
+                          categories={categories}
+                          suppliers={suppliers}
+                          saveProduct={saveProduct}
+                          toggleProductStatus={toggleProductStatus}
+                          canEdit={canEdit}
                         />
                       }
                     />
@@ -256,7 +311,7 @@ function AppShell() {
                       element={
                         <InventoryPage
                           inventory={inventory}
-                          tiles={tiles}
+                          tiles={products}
                           warehouses={warehouses}
                           canEdit={canEdit}
                           bulkInventoryUpdate={bulkInventoryUpdate}
@@ -268,7 +323,7 @@ function AppShell() {
                       element={
                         <TransactionsPage
                           transactions={transactions}
-                          tiles={tiles}
+                          tiles={products}
                           saveTransaction={saveTransaction}
                           canDoTransactions={canDoTransactions}
                         />
@@ -280,7 +335,7 @@ function AppShell() {
                         <TransfersPage
                           transfers={transfers}
                           warehouses={warehouses}
-                          tiles={tiles}
+                          tiles={products}
                           saveTransfer={saveTransfer}
                           updateTransferStatus={updateTransferStatus}
                           canEdit={canEdit}
@@ -293,14 +348,14 @@ function AppShell() {
                         <OrdersPage
                           orders={orders}
                           suppliers={suppliers}
-                          tiles={tiles}
+                          tiles={products}
                           saveOrder={saveOrder}
                           updateOrderStatus={updateOrderStatus}
                           canEdit={canEdit}
                         />
                       }
                     />
-                    <Route path="/alerts" element={<AlertsPage alerts={alerts} tiles={tiles} warehouses={warehouses} resolveAlert={resolveAlert} canEdit={canEdit} />} />
+                    <Route path="/alerts" element={<AlertsPage alerts={alerts} tiles={products} warehouses={warehouses} resolveAlert={resolveAlert} canEdit={canEdit} />} />
                     <Route path="/activity" element={<ActivityLogsPage transactions={transactions} />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

@@ -65,7 +65,7 @@ export default function OrdersPage({ orders, suppliers, tiles, saveOrder, update
   const submit = (event) => {
     event.preventDefault();
     const selectedTile = tiles.find((tile) => tile.id === Number(form.tileId));
-    const unitPrice = selectedTile?.unitPrice || 0;
+    const unitPrice = selectedTile?.costPrice || 0;
     const quantity = Number(form.quantity);
 
     saveOrder({
