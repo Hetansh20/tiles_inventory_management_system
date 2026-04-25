@@ -11,7 +11,7 @@ app.use(cors())
 app.use(express.json())
 
 app.get('/', (req, res) => {
-  res.send('Sanitary Ware Inventory API Running')
+  res.send('Welcome Ceramic API Running')
 })
 
 const authRoutes = require('./routes/authRoutes')

@@ -22,7 +22,7 @@ export default function LoginPage({ onLogin }) {
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl grid-cols-1 gap-6 md:grid-cols-2">
         <section className="flex flex-col justify-between rounded-3xl bg-black dark:bg-white p-8 text-white dark:text-black">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300 dark:text-slate-600">Sanitary Ware System</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-300 dark:text-slate-600">Welcome Ceramic</p>
             <h1 className="mt-4 text-4xl font-extrabold leading-tight md:text-5xl">Inventory Management</h1>
             <p className="mt-4 max-w-md text-base leading-relaxed text-slate-300 dark:text-slate-600">
               Manage tiles, suppliers, storage facilities, and stock tracking directly through this dashboard.

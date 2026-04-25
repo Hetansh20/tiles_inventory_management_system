@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen, onClose, onLogout, role = "staff" }) {
       >
         <div className="flex h-full flex-col p-4">
           <div className="mb-6 rounded-2xl bg-black dark:bg-white border border-slate-700 p-5 shadow-sm text-white dark:text-black">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-300 dark:text-slate-600">SanitaryWareFlow</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-300 dark:text-slate-600">Welcome Ceramic</p>
             <p className="mt-1 text-xl font-black tracking-tight text-white dark:text-black">Inventory Studio</p>
             <p className="mt-1 text-xs font-semibold text-slate-400">Operational Dashboard</p>
           </div>
