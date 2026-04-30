@@ -8,7 +8,7 @@ import useDebounce from "../hooks/useDebounce";
 const defaultForm = {
   name: "",
   contactPerson: "",
-  contactNumber: "",
+  phone: "",
   email: "",
   address: "",
 };
@@ -32,7 +32,7 @@ export default function SuppliersPage({ suppliers, saveSupplier, canEdit }) {
   const columns = [
     { key: "name", header: "Supplier", render: (row) => <p className="font-semibold">{row.name}</p> },
     { key: "contactPerson", header: "Contact Person" },
-    { key: "contactNumber", header: "Contact Number" },
+    { key: "phone", header: "Contact Number" },
     { key: "email", header: "Email" },
     {
       key: "address",
@@ -102,8 +102,8 @@ export default function SuppliersPage({ suppliers, saveSupplier, canEdit }) {
           />
           <Field
             label="Contact Number"
-            value={form.contactNumber}
-            onChange={(value) => setForm((prev) => ({ ...prev, contactNumber: value }))}
+            value={form.phone}
+            onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
             required
           />
           <Field label="Email" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} type="email" required />

@@ -52,16 +52,20 @@ function AppShell() {
     const fetchInitialData = async () => {
       try {
         if (isAuthenticated) {
-          const [fetchedUsers, fetchedProducts, fetchedCategories, fetchedMovements] = await Promise.all([
+          const [fetchedUsers, fetchedProducts, fetchedCategories, fetchedMovements, fetchedSuppliers, fetchedOrders] = await Promise.all([
             canEdit ? apiCall("/users").catch(()=>[]) : Promise.resolve([]),
             apiCall("/products").catch(()=>[]),
             apiCall("/categories").catch(()=>[]),
-            apiCall("/movements").catch(()=>[])
+            apiCall("/movements").catch(()=>[]),
+            apiCall("/suppliers").catch(()=>[]),
+            apiCall("/orders").catch(()=>[])
           ]);
           if (canEdit) setUsers(fetchedUsers.map(u => ({ ...u, id: u._id })));
           setProducts(fetchedProducts.map(p => ({ ...p, id: p._id })));
           setCategories(fetchedCategories.map(c => ({ ...c, id: c._id })));
           setMovements(fetchedMovements.map(m => ({ ...m, id: m._id })));
+          setSuppliers(fetchedSuppliers.map(s => ({ ...s, id: s._id })));
+          setOrders(fetchedOrders.map(o => ({ ...o, id: o._id })));
         }
       } catch (e) {
         console.error("Failed to fetch initial data", e);
@@ -158,9 +162,20 @@ function AppShell() {
       toast.error("Failed to toggle status");
     }
   };
-  const saveSupplier = (supplier) => {
-    setSuppliers((prev) => upsert(prev, supplier));
-    toast.success("Supplier saved successfully");
+  const saveSupplier = async (supplier) => {
+    try {
+      if (supplier.id) {
+        const updated = await apiCall(`/suppliers/${supplier.id}`, { method: "PUT", body: JSON.stringify(supplier) });
+        setSuppliers((prev) => prev.map((item) => (item.id === updated._id ? { ...updated, id: updated._id } : item)));
+        toast.success("Supplier updated");
+      } else {
+        const created = await apiCall(`/suppliers`, { method: "POST", body: JSON.stringify(supplier) });
+        setSuppliers((prev) => [...prev, { ...created, id: created._id }]);
+        toast.success("Supplier created");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to save supplier");
+    }
   };
   const saveWarehouse = (warehouse) => {
     setWarehouses((prev) => upsert(prev, warehouse));
@@ -194,9 +209,14 @@ function AppShell() {
     setTransfers((prev) => upsert(prev, transfer));
     toast.success("Transfer created");
   };
-  const saveOrder = (order) => {
-    setOrders((prev) => upsert(prev, order));
-    toast.success("Order created");
+  const saveOrder = async (order) => {
+    try {
+      const created = await apiCall("/orders", { method: "POST", body: JSON.stringify(order) });
+      setOrders((prev) => [{ ...created, id: created._id }, ...prev]);
+      toast.success("Purchase order created");
+    } catch (e) {
+      toast.error(e.message || "Failed to create order");
+    }
   };
 
   const toggleUserStatus = async (id) => {
@@ -215,8 +235,36 @@ function AppShell() {
     setTransfers((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
   };
 
-  const updateOrderStatus = (id, status) => {
-    setOrders((prev) => prev.map((item) => (item.id === id ? { ...item, status } : item)));
+  const updateOrderStatus = async (id, status) => {
+    try {
+      const updated = await apiCall(`/orders/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
+      setOrders((prev) => prev.map((item) => (item.id === id ? { ...updated, id: updated._id } : item)));
+      toast.success(`Order status updated to ${status}`);
+    } catch (e) {
+      toast.error(e.message || "Failed to update order status");
+    }
+  };
+
+  const receiveItems = async (orderId, itemsToReceive) => {
+    try {
+      const updatedOrder = await apiCall(`/orders/${orderId}/receive`, {
+        method: "POST",
+        body: JSON.stringify({ items: itemsToReceive })
+      });
+      setOrders((prev) => prev.map((item) => (item.id === orderId ? { ...updatedOrder, id: updatedOrder._id } : item)));
+      
+      // Also silently fetch products and movements again since they got updated in backend
+      const [newProducts, newMovements] = await Promise.all([
+        apiCall("/products").catch(()=>[]),
+        apiCall("/movements").catch(()=>[])
+      ]);
+      setProducts(newProducts.map(p => ({ ...p, id: p._id })));
+      setMovements(newMovements.map(m => ({ ...m, id: m._id })));
+
+      toast.success("Items received and inventory updated");
+    } catch (e) {
+      toast.error(e.message || "Failed to receive items");
+    }
   };
 
   const resolveAlert = (id) => {
@@ -373,6 +421,7 @@ function AppShell() {
                           tiles={products}
                           saveOrder={saveOrder}
                           updateOrderStatus={updateOrderStatus}
+                          receiveItems={receiveItems}
                           canEdit={canEdit}
                         />
                       }
