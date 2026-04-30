@@ -49,20 +49,18 @@ function AppShell() {
   const [transfers, setTransfers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         if (isAuthenticated) {
-          const [fetchedUsers, fetchedProducts, fetchedCategories, fetchedMovements, fetchedSuppliers, fetchedOrders, fetchedAuditLogs] = await Promise.all([
+          const [fetchedUsers, fetchedProducts, fetchedCategories, fetchedMovements, fetchedSuppliers, fetchedOrders] = await Promise.all([
             canManageUsers ? apiCall("/users").catch(()=>[]) : Promise.resolve([]),
             apiCall("/products").catch(()=>[]),
             apiCall("/categories").catch(()=>[]),
             apiCall("/movements").catch(()=>[]),
             apiCall("/suppliers").catch(()=>[]),
-            apiCall("/orders").catch(()=>[]),
-            canManageUsers ? apiCall("/audit-logs").catch(()=>[]) : Promise.resolve([])
+            apiCall("/orders").catch(()=>[])
           ]);
           if (canManageUsers) setUsers(fetchedUsers.map(u => ({ ...u, id: u._id })));
           setProducts(fetchedProducts.map(p => ({ ...p, id: p._id })));
@@ -70,7 +68,6 @@ function AppShell() {
           setMovements(fetchedMovements.map(m => ({ ...m, id: m._id })));
           setSuppliers(fetchedSuppliers.map(s => ({ ...s, id: s._id })));
           setOrders(fetchedOrders.map(o => ({ ...o, id: o._id })));
-          if (canManageUsers) setAuditLogs(fetchedAuditLogs);
         }
       } catch (e) {
         console.error("Failed to fetch initial data", e);
@@ -433,15 +430,15 @@ function AppShell() {
                     />
                     <Route path="/alerts" element={<AlertsPage alerts={alerts} tiles={products} warehouses={warehouses} resolveAlert={resolveAlert} canEdit={canManageProducts} />} />
                     <Route path="/reports" element={<ReportsPage products={products} movements={movements} users={users} />} />
-                    <Route path="/activity" element={<ActivityLogsPage transactions={movements} />} />
-                    <Route 
-                      path="/audit" 
+                    <Route
+                      path="/audit-logs"
                       element={
                         <PrivateRoute allowedRoles={["admin"]}>
-                          <AuditLogsPage auditLogs={auditLogs} />
+                          <AuditLogsPage />
                         </PrivateRoute>
-                      } 
+                      }
                     />
+                    <Route path="/activity" element={<ActivityLogsPage transactions={movements} />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </PageLayout>

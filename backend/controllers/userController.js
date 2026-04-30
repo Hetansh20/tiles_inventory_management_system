@@ -1,6 +1,6 @@
 const User = require('../models/user')
-const { logAudit } = require('../services/auditService')
 const bcrypt = require('bcryptjs')
+const { logAction } = require('../services/auditService');
 
 const getAllUsers = async (req, res) => {
   try {
@@ -16,19 +16,16 @@ const toggleUserStatus = async (req, res) => {
     const user = await User.findById(req.params.id)
 
     if (user) {
-      const beforeState = JSON.parse(JSON.stringify(user))
+      const oldState = JSON.parse(JSON.stringify(user))
+      
       user.isActive = !user.isActive
       const updatedUser = await user.save()
-
-      await logAudit({
-        userId: req.user.id,
-        module: 'User',
-        action: 'UPDATE',
-        recordId: updatedUser._id,
-        beforeState,
-        afterState: updatedUser
-      })
-
+      
+      const safeOldState = { ...oldState, password: '[REDACTED]' };
+      const safeNewState = { ...JSON.parse(JSON.stringify(updatedUser)), password: '[REDACTED]' };
+      
+      await logAction(req.user.id, 'users', 'UPDATE', updatedUser._id, safeOldState, safeNewState);
+      
       res.json({
         id: updatedUser._id,
         name: updatedUser.name,
@@ -65,13 +62,8 @@ const createUser = async (req, res) => {
       permissions: permissions || []
     })
 
-    await logAudit({
-      userId: req.user.id,
-      module: 'User',
-      action: 'CREATE',
-      recordId: user._id,
-      afterState: user
-    })
+    const safeNewState = { ...JSON.parse(JSON.stringify(user)), password: '[REDACTED]' };
+    await logAction(req.user.id, 'users', 'CREATE', user._id, null, safeNewState);
 
     res.status(201).json({
       id: user._id,
@@ -91,6 +83,8 @@ const updateUser = async (req, res) => {
     const user = await User.findById(req.params.id)
 
     if (user) {
+      const oldState = JSON.parse(JSON.stringify(user))
+      
       user.name = req.body.name || user.name
       user.email = req.body.email || user.email
       user.role = req.body.role || user.role
@@ -106,6 +100,11 @@ const updateUser = async (req, res) => {
       }
 
       const updatedUser = await user.save()
+      
+      const safeOldState = { ...oldState, password: '[REDACTED]' };
+      const safeNewState = { ...JSON.parse(JSON.stringify(updatedUser)), password: '[REDACTED]' };
+      
+      await logAction(req.user.id, 'users', 'UPDATE', updatedUser._id, safeOldState, safeNewState);
       
       res.json({
         id: updatedUser._id,

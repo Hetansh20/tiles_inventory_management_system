@@ -1,5 +1,5 @@
 const Supplier = require('../models/supplier');
-const { logAudit } = require('../services/auditService');
+const { logAction } = require('../services/auditService');
 
 const getSuppliers = async (req, res) => {
   try {
@@ -23,14 +23,8 @@ const createSupplier = async (req, res) => {
       name, contactPerson, email, phone, address, isActive
     });
     
-    await logAudit({
-      userId: req.user.id,
-      module: 'Supplier',
-      action: 'CREATE',
-      recordId: supplier._id,
-      afterState: supplier
-    });
-
+    await logAction(req.user.id, 'suppliers', 'CREATE', supplier._id, null, supplier);
+    
     res.status(201).json(supplier);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -44,7 +38,7 @@ const updateSupplier = async (req, res) => {
       return res.status(404).json({ message: 'Supplier not found' });
     }
 
-    const beforeState = JSON.parse(JSON.stringify(supplier));
+    const oldState = JSON.parse(JSON.stringify(supplier));
 
     supplier.name = req.body.name || supplier.name;
     supplier.contactPerson = req.body.contactPerson || supplier.contactPerson;
@@ -57,16 +51,9 @@ const updateSupplier = async (req, res) => {
     }
 
     const updated = await supplier.save();
-
-    await logAudit({
-      userId: req.user.id,
-      module: 'Supplier',
-      action: 'UPDATE',
-      recordId: updated._id,
-      beforeState,
-      afterState: updated
-    });
-
+    
+    await logAction(req.user.id, 'suppliers', 'UPDATE', updated._id, oldState, updated);
+    
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -80,19 +67,14 @@ const deleteSupplier = async (req, res) => {
       return res.status(404).json({ message: 'Supplier not found' });
     }
 
-    const beforeState = JSON.parse(JSON.stringify(supplier));
+    const oldState = JSON.parse(JSON.stringify(supplier));
+
+    // Soft delete
     supplier.isActive = false;
-    const updated = await supplier.save();
-
-    await logAudit({
-      userId: req.user.id,
-      module: 'Supplier',
-      action: 'DELETE',
-      recordId: updated._id,
-      beforeState,
-      afterState: updated
-    });
-
+    await supplier.save();
+    
+    await logAction(req.user.id, 'suppliers', 'DELETE', supplier._id, oldState, supplier);
+    
     res.json({ message: 'Supplier deactivated successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

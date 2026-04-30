@@ -1,5 +1,5 @@
 const Product = require('../models/product');
-const { logAudit } = require('../services/auditService');
+const { logAction } = require('../services/auditService');
 
 // Get all products (active and inactive, though frontend can filter)
 exports.getProducts = async (req, res) => {
@@ -22,19 +22,24 @@ exports.createProduct = async (req, res) => {
       return res.status(400).json({ message: 'Product with this SKU already exists' });
     }
 
-    const product = await Product.create({
-      name, sku, category, supplier, unitOfMeasure, currentQuantity: currentQuantity || 0, lowStockThreshold: lowStockThreshold || 10, costPrice, description
+    const product = new Product({
+      name,
+      sku,
+      category,
+      supplier,
+      unitOfMeasure,
+      currentQuantity: currentQuantity || 0, // default 0 if not provided
+      lowStockThreshold: lowStockThreshold || 10,
+      costPrice,
+      description
     });
 
-    await logAudit({
-      userId: req.user.id,
-      module: 'Product',
-      action: 'CREATE',
-      recordId: product._id,
-      afterState: product
-    });
-
+    await product.save();
+    
+    // Populate before returning
     const populatedProduct = await Product.findById(product._id).populate('category', 'name description');
+    
+    await logAction(req.user.id, 'products', 'CREATE', product._id, null, populatedProduct);
     
     res.status(201).json(populatedProduct);
   } catch (error) {
@@ -58,36 +63,20 @@ exports.updateProduct = async (req, res) => {
       }
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-        return res.status(404).json({ message: 'Product not found' });
+    const oldProduct = await Product.findById(productId);
+    if (!oldProduct) {
+      return res.status(404).json({ message: 'Product not found' });
     }
-    
-    const beforeState = JSON.parse(JSON.stringify(product));
 
-    product.name = name || product.name;
-    product.sku = sku || product.sku;
-    product.category = category || product.category;
-    product.supplier = supplier || product.supplier;
-    product.unitOfMeasure = unitOfMeasure || product.unitOfMeasure;
-    product.lowStockThreshold = lowStockThreshold !== undefined ? lowStockThreshold : product.lowStockThreshold;
-    product.costPrice = costPrice !== undefined ? costPrice : product.costPrice;
-    product.description = description || product.description;
+    const product = await Product.findByIdAndUpdate(
+      productId,
+      { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description },
+      { new: true, runValidators: true }
+    ).populate('category', 'name description');
 
-    const updatedProduct = await product.save();
+    await logAction(req.user.id, 'products', 'UPDATE', product._id, oldProduct, product);
 
-    await logAudit({
-      userId: req.user.id,
-      module: 'Product',
-      action: 'UPDATE',
-      recordId: updatedProduct._id,
-      beforeState,
-      afterState: updatedProduct
-    });
-
-    const populatedProduct = await Product.findById(updatedProduct._id).populate('category', 'name description');
-    
-    res.json(populatedProduct);
+    res.json(product);
   } catch (error) {
     res.status(500).json({ message: 'Server error updating product', error: error.message });
   }
@@ -96,28 +85,20 @@ exports.updateProduct = async (req, res) => {
 // Soft delete a product
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    
-    if (!product) {
+    const oldProduct = await Product.findById(req.params.id);
+    if (!oldProduct) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const beforeState = JSON.parse(JSON.stringify(product));
-    product.isActive = false;
-    const updatedProduct = await product.save();
-
-    await logAudit({
-      userId: req.user.id,
-      module: 'Product',
-      action: 'UPDATE',
-      recordId: updatedProduct._id,
-      beforeState,
-      afterState: updatedProduct
-    });
-
-    const populatedProduct = await Product.findById(updatedProduct._id).populate('category', 'name description');
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { isActive: false },
+      { new: true }
+    ).populate('category', 'name description');
     
-    res.json({ message: 'Product soft-deleted successfully', product: populatedProduct });
+    await logAction(req.user.id, 'products', 'DELETE', product._id, oldProduct, product);
+
+    res.json({ message: 'Product soft-deleted successfully', product });
   } catch (error) {
     res.status(500).json({ message: 'Server error deleting product', error: error.message });
   }
@@ -131,20 +112,14 @@ exports.toggleProductStatus = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const beforeState = JSON.parse(JSON.stringify(product));
+    const oldState = JSON.parse(JSON.stringify(product));
+    
     product.isActive = !product.isActive;
-    const updatedProduct = await product.save();
+    await product.save();
+    
+    const populatedProduct = await Product.findById(product._id).populate('category', 'name description');
 
-    await logAudit({
-      userId: req.user.id,
-      module: 'Product',
-      action: 'UPDATE',
-      recordId: updatedProduct._id,
-      beforeState,
-      afterState: updatedProduct
-    });
-
-    const populatedProduct = await Product.findById(updatedProduct._id).populate('category', 'name description');
+    await logAction(req.user.id, 'products', 'UPDATE', product._id, oldState, populatedProduct);
 
     res.json(populatedProduct);
   } catch (error) {

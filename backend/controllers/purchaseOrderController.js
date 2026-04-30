@@ -2,7 +2,7 @@ const PurchaseOrder = require('../models/purchaseOrder');
 const Product = require('../models/product');
 const StockMovement = require('../models/stockMovement');
 const mongoose = require('mongoose');
-const { logAudit } = require('../services/auditService');
+const { logAction } = require('../services/auditService');
 
 const getOrders = async (req, res) => {
   try {
@@ -39,19 +39,13 @@ const createOrder = async (req, res) => {
       createdBy: req.user.id
     });
     
-    await logAudit({
-      userId: req.user.id,
-      module: 'Order',
-      action: 'CREATE',
-      recordId: order._id,
-      afterState: order
-    });
-
     // Fetch with populated fields to return
     const populatedOrder = await PurchaseOrder.findById(order._id)
       .populate('supplier', 'name')
       .populate('createdBy', 'name')
       .populate('lines.product', 'name sku costPrice');
+
+    await logAction(req.user.id, 'orders', 'CREATE', order._id, null, populatedOrder);
 
     res.status(201).json(populatedOrder);
   } catch (error) {
@@ -68,23 +62,17 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: 'Cannot update a fully received order' });
     }
 
-    const beforeState = JSON.parse(JSON.stringify(order));
+    const oldState = JSON.parse(JSON.stringify(order));
+
     order.status = req.body.status;
     await order.save();
     
-    await logAudit({
-      userId: req.user.id,
-      module: 'Order',
-      action: 'UPDATE',
-      recordId: order._id,
-      beforeState,
-      afterState: order
-    });
-
     const populatedOrder = await PurchaseOrder.findById(order._id)
       .populate('supplier', 'name')
       .populate('createdBy', 'name')
       .populate('lines.product', 'name sku costPrice');
+
+    await logAction(req.user.id, 'orders', 'UPDATE', order._id, oldState, populatedOrder);
 
     res.json(populatedOrder);
   } catch (error) {
@@ -112,6 +100,7 @@ const receiveItems = async (req, res) => {
       return res.status(400).json({ message: 'No items provided to receive' });
     }
 
+    const oldState = JSON.parse(JSON.stringify(order));
     let itemsReceivedThisTime = 0;
 
     for (const item of items) {
@@ -159,8 +148,6 @@ const receiveItems = async (req, res) => {
       if (line.receivedQuantity > 0) anyReceived = true;
     }
 
-    const beforeState = JSON.parse(JSON.stringify(order));
-
     if (allReceived) {
       order.status = 'Received';
     } else if (anyReceived) {
@@ -168,17 +155,9 @@ const receiveItems = async (req, res) => {
     }
 
     await order.save({ session });
-
-    await logAudit({
-      userId: req.user.id,
-      module: 'Order',
-      action: 'UPDATE',
-      recordId: order._id,
-      beforeState,
-      afterState: order,
-      session
-    });
-
+    
+    await logAction(req.user.id, 'orders', 'UPDATE', order._id, oldState, order, session);
+    
     await session.commitTransaction();
     session.endSession();
 
