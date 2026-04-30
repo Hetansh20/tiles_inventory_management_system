@@ -10,6 +10,16 @@ import useDebounce from "../hooks/useDebounce";
 
 const defaultForm = { name: "", email: "", role: "staff", isActive: true, permissions: [] };
 
+const availableModules = [
+  { id: "inventory", label: "Record Stock Movements" },
+  { id: "products", label: "Manage Products" },
+  { id: "categories", label: "Manage Categories" },
+  { id: "suppliers", label: "Manage Suppliers" },
+  { id: "orders", label: "Manage Purchase Orders" },
+  { id: "warehouses", label: "Manage Warehouses" },
+  { id: "transfers", label: "Manage Transfers" }
+];
+
 export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }) {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
@@ -45,7 +55,18 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
     {
       key: "permissions",
       header: "Permissions",
-      render: (row) => row.permissions?.join(", ") || "None",
+      render: (row) => {
+        if (row.role === "admin") return <span className="text-slate-400 italic">All Access</span>;
+        if (!row.permissions || row.permissions.length === 0) return <span className="text-slate-400 italic">None</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {row.permissions.map(pId => {
+              const label = availableModules.find(m => m.id === pId)?.label || pId;
+              return <span key={pId} className="bg-slate-100 px-2 py-0.5 rounded text-xs text-slate-600 border border-slate-200">{label}</span>;
+            })}
+          </div>
+        );
+      },
     },
     {
       key: "actions",
@@ -154,31 +175,44 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
               <option value="staff">Staff</option>
             </select>
           </label>
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-            />
-            Active user
-          </label>
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <input
-              type="checkbox"
-              checked={form.permissions.includes("inventory")}
-              onChange={(event) => {
-                const checked = event.target.checked;
-                setForm((prev) => {
-                  const newPermissions = checked 
-                    ? [...(prev.permissions || []), "inventory"]
-                    : (prev.permissions || []).filter(p => p !== "inventory");
-                  return { ...prev, permissions: newPermissions };
-                });
-              }}
-            />
-            Can record inventory movements
-          </label>
-          <div className="flex justify-end gap-2">
+          <div className="flex gap-4 border-t border-slate-100 pt-3 flex-wrap">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 w-full">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+              />
+              Active User (Can log in)
+            </label>
+          </div>
+
+          {form.role === "staff" && (
+            <div className="space-y-2 border-t border-slate-100 pt-3">
+              <span className="text-sm font-bold text-slate-700">Module Permissions</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {availableModules.map((mod) => (
+                  <label key={mod.id} className="flex items-center gap-2 text-sm text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={form.permissions?.includes(mod.id)}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setForm((prev) => {
+                          const newPerms = checked
+                            ? [...(prev.permissions || []), mod.id]
+                            : (prev.permissions || []).filter((p) => p !== mod.id);
+                          return { ...prev, permissions: newPerms };
+                        });
+                      }}
+                    />
+                    {mod.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 mt-2">
             <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2">
               Cancel
             </button>
