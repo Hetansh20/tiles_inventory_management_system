@@ -56,8 +56,8 @@ function ValuationReport({ products }) {
     { key: "sku", header: "SKU" },
     { key: "name", header: "Product" },
     { key: "currentQuantity", header: "Quantity on Hand" },
-    { key: "costPrice", header: "Cost Price", render: (row) => `Rs ${Number(row.costPrice).toLocaleString()}` },
-    { key: "totalValue", header: "Total Value", render: (row) => <span className="font-bold">Rs {Number(row.totalValue).toLocaleString()}</span> },
+    { key: "costPrice", header: "Cost Price", render: (row) => `₹${Number(row.costPrice).toLocaleString()}` },
+    { key: "totalValue", header: "Total Value", render: (row) => <span className="font-bold">₹{Number(row.totalValue).toLocaleString()}</span> },
   ];
 
   const exportData = enriched.map(p => ({ SKU: p.sku, Product: p.name, Qty: p.currentQuantity, CostPrice: p.costPrice, TotalValue: p.totalValue }));
@@ -67,7 +67,7 @@ function ValuationReport({ products }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Inventory Valuation</p>
-          <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Rs {totalInventoryValue.toLocaleString()}</p>
+          <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">₹{totalInventoryValue.toLocaleString()}</p>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => exportToCsv("valuation-report", exportData)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold">CSV</button>

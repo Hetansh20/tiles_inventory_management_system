@@ -91,7 +91,7 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
         {currentUser?.role === "admin" && (
           <>
             <StatCard title="Pending Purchase Orders" value={pendingOrdersCount} icon={FiTruck} hint="Awaiting delivery" tone="amber" />
-            <StatCard title="Total Stock Value" value={`Rs ${totalStockValue.toLocaleString()}`} icon={FiArchive} hint="Current gross value" tone="sky" />
+            <StatCard title="Total Stock Value" value={`₹${totalStockValue.toLocaleString()}`} icon={FiArchive} hint="Current gross value" tone="sky" />
           </>
         )}
       </section>

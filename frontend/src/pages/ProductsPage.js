@@ -63,7 +63,7 @@ export default function ProductsPage({
     { key: "category", header: "Category", render: (row) => row.category?.name || "N/A" },
     { key: "supplier", header: "Supplier", render: (row) => suppliers.find(s => String(s.id) === row.supplier)?.name || row.supplier },
     { key: "currentQuantity", header: "Stock", render: (row) => `${row.currentQuantity} ${row.unitOfMeasure}` },
-    { key: "costPrice", header: "Cost Price", render: (row) => `$${Number(row.costPrice).toFixed(2)}` },
+    { key: "costPrice", header: "Cost Price", render: (row) => `₹${Number(row.costPrice).toFixed(2)}` },
     {
       key: "isActive",
       header: "Status",
