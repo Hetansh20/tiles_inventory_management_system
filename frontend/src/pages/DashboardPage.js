@@ -68,7 +68,7 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
     { key: "date", header: "Date" },
     { key: "type", header: "Type", render: (row) => <StatusBadge label={row.type} tone={typeTone(row.type)} /> },
     { key: "quantity", header: "Quantity" },
-    { key: "performedBy", header: "Performed By" },
+    { key: "performedBy", header: "Performed By", render: (row) => row.performedBy?.name || row.performedBy || "Unknown" },
     { key: "referenceId", header: "Reference" },
   ];
 
