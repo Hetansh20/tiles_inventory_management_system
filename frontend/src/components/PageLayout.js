@@ -3,6 +3,9 @@ import { useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import GlobalSearchModal from "./GlobalSearchModal";
+import QRScannerModal from "./QRScannerModal";
+import ProductDetailsModal from "./ProductDetailsModal";
+import { toast } from "react-toastify";
 
 const meta = {
   "/dashboard": { title: "Dashboard", subtitle: "Inventory and stock performance overview" },
@@ -23,6 +26,8 @@ export default function PageLayout({ children, onLogout, currentUser, alerts, tr
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannedProduct, setScannedProduct] = useState(null);
   const location = useLocation();
 
   const pageMeta = useMemo(
@@ -61,6 +66,17 @@ export default function PageLayout({ children, onLogout, currentUser, alerts, tr
     return groups;
   }, [searchData, searchQuery]);
 
+  const handleScan = (decodedText) => {
+    setScannerOpen(false);
+    const skuToFind = decodedText.trim().toLowerCase();
+    const foundProduct = searchData.products.find((p) => p.sku?.toLowerCase() === skuToFind);
+    if (foundProduct) {
+      setScannedProduct(foundProduct);
+    } else {
+      toast.error(`No product found with SKU: ${decodedText}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onLogout={onLogout} role={currentUser?.role} />
@@ -70,6 +86,7 @@ export default function PageLayout({ children, onLogout, currentUser, alerts, tr
           subtitle={pageMeta.subtitle}
           onMenuClick={() => setSidebarOpen((value) => !value)}
           onOpenSearch={() => setSearchOpen(true)}
+          onOpenScanner={() => setScannerOpen(true)}
           unreadCount={unreadCount}
           alerts={alerts.filter((alert) => alert.status === "open")}
           transactions={transactions}
@@ -85,6 +102,17 @@ export default function PageLayout({ children, onLogout, currentUser, alerts, tr
         onQueryChange={setSearchQuery}
         onClose={() => setSearchOpen(false)}
         results={groupedResults}
+      />
+      <QRScannerModal 
+        isOpen={scannerOpen} 
+        onClose={() => setScannerOpen(false)} 
+        onScan={handleScan} 
+      />
+      <ProductDetailsModal 
+        isOpen={!!scannedProduct} 
+        onClose={() => setScannedProduct(null)} 
+        product={scannedProduct} 
+        category={scannedProduct?.category}
       />
     </div>
   );

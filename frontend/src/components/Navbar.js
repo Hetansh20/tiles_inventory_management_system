@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { FiMenu, FiBell, FiMoon, FiSearch, FiSun, FiUser, FiLogOut, FiSettings } from "react-icons/fi";
+import { FiMenu, FiBell, FiMoon, FiSearch, FiSun, FiUser, FiLogOut, FiSettings, FiCamera } from "react-icons/fi";
 import NotificationDropdown from "./NotificationDropdown";
 
 export default function Navbar({
@@ -7,6 +7,7 @@ export default function Navbar({
   subtitle,
   onMenuClick,
   onOpenSearch,
+  onOpenScanner,
   unreadCount,
   alerts,
   transactions,
@@ -53,6 +54,15 @@ export default function Navbar({
             <FiSearch size={16} />
             <span className="hidden sm:inline">Search anything... (Ctrl+K)</span>
             <span className="sm:hidden">Search</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={onOpenScanner}
+            className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600 border border-indigo-100 transition-all hover:bg-indigo-100 dark:border-indigo-900/30 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+            title="Scan QR Code"
+          >
+            <FiCamera size={18} />
           </button>
           
           <button

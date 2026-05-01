@@ -84,6 +84,13 @@ export default function ProductsPage({
           </button>
           <button
             type="button"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+            onClick={() => { setGeneratedProduct(row); setQrModalOpen(true); }}
+          >
+            QR
+          </button>
+          <button
+            type="button"
             disabled={!canEdit}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-40 ${row.isActive ? "bg-black dark:bg-white dark:text-black hover:bg-slate-800" : "bg-emerald-500 hover:bg-emerald-600"} shadow-sm`}
             onClick={() => toggleProductStatus(row._id || row.id)}
