@@ -1,46 +1,47 @@
-const jwt = require('jsonwebtoken')
-const User = require('../models/user')
+const jwt = require('jsonwebtoken');
+const { query } = require('../config/db');
+const { userRow } = require('../utils/sqlHelpers');
 
 const protect = async (req, res, next) => {
-  let token
+  let token;
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      token = req.headers.authorization.split(' ')[1]
+      token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-      req.user = await User.findById(decoded.id).select('-password')
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const users = await query('SELECT * FROM users WHERE id = ? LIMIT 1', [decoded.id]);
+      req.user = userRow(users[0]);
 
       if (!req.user) {
-        return res.status(401).json({ message: 'User not found' })
+        return res.status(401).json({ message: 'User not found' });
       }
 
       if (!req.user.isActive) {
-        return res.status(401).json({ message: 'Account has been deactivated' })
+        return res.status(401).json({ message: 'Account has been deactivated' });
       }
 
-      next()
+      next();
     } catch (error) {
-      console.error(error)
+      console.error(error);
       if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Token expired' })
+        return res.status(401).json({ message: 'Token expired' });
       }
-      res.status(401).json({ message: 'Not authorized, token failed' })
+      res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' })
+    res.status(401).json({ message: 'Not authorized, no token' });
   }
-}
+};
 
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
-    next()
+    next();
   } else {
-    res.status(403).json({ message: 'Not authorized as an admin' })
+    res.status(403).json({ message: 'Not authorized as an admin' });
   }
-}
+};
 
-module.exports = { protect, admin }
+module.exports = { protect, admin };

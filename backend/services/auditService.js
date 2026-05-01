@@ -1,35 +1,35 @@
-const AuditLog = require('../models/auditLog');
+const { query } = require('../config/db');
+const { createId } = require('../utils/sqlHelpers');
+
+const serializeState = (state) => (state ? JSON.stringify(state) : null);
 
 /**
- * Logs an action to the AuditLog collection.
- * @param {string} userId - The ID of the user performing the action
- * @param {string} moduleName - The name of the module (e.g., 'Users', 'Products')
- * @param {string} action - 'CREATE', 'UPDATE', or 'DELETE'
- * @param {string} targetId - The ID of the document being modified
- * @param {Object} beforeState - The document state before the action (null for CREATE)
- * @param {Object} afterState - The document state after the action (null for DELETE)
- * @param {Object} [session] - Optional mongoose session for transactions
+ * Logs an action to the append-only audit_logs table.
  */
-const logAction = async (userId, moduleName, action, targetId, beforeState = null, afterState = null, session = null) => {
+const logAction = async (userId, moduleName, action, targetId, beforeState = null, afterState = null, connection = null) => {
   try {
-    const logEntry = new AuditLog({
-      user: userId,
-      module: moduleName,
-      action: action,
-      targetId: targetId,
-      beforeState: beforeState ? JSON.parse(JSON.stringify(beforeState)) : null,
-      afterState: afterState ? JSON.parse(JSON.stringify(afterState)) : null
-    });
+    const executor = connection || { execute: query };
+    const sql = `
+      INSERT INTO audit_logs (id, user_id, module_name, action, target_id, before_state, after_state)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      createId(),
+      userId || null,
+      moduleName,
+      action,
+      targetId,
+      serializeState(beforeState),
+      serializeState(afterState)
+    ];
 
-    if (session) {
-      await logEntry.save({ session });
+    if (connection) {
+      await executor.execute(sql, params);
     } else {
-      await logEntry.save();
+      await query(sql, params);
     }
   } catch (error) {
     console.error(`[Audit Log Error] Failed to log ${action} on ${moduleName}:`, error.message);
-    // We intentionally don't throw to avoid breaking the main application flow if logging fails, 
-    // but in a strict compliance environment, you might want to throw here.
   }
 };
 

@@ -17,9 +17,9 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "dev": "react-scripts start",
-    "start": "react-scripts start",
-    "build": "react-scripts build"
+    "dev": "GENERATE_SOURCEMAP=false react-scripts start",
+    "start": "GENERATE_SOURCEMAP=false react-scripts start",
+    "build": "GENERATE_SOURCEMAP=false react-scripts build"
   },
   "browserslist": {
     "production": [

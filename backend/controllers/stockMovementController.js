@@ -1,10 +1,23 @@
-const StockMovement = require('../models/stockMovement');
-const Product = require('../models/product');
-const mongoose = require('mongoose');
+const { query, transaction } = require('../config/db');
+const { createId, movementRow } = require('../utils/sqlHelpers');
 
-// @desc    Record a new stock movement
-// @route   POST /api/movements
-// @access  Private (Admin or Staff with 'inventory' permission)
+const movementSelect = `
+  SELECT
+    sm.*,
+    p.name AS product_name,
+    p.sku AS product_sku,
+    u.name AS user_name,
+    u.email AS user_email
+  FROM stock_movements sm
+  LEFT JOIN products p ON p.id = sm.product_id
+  LEFT JOIN users u ON u.id = sm.performed_by
+`;
+
+const findMovement = async (id) => {
+  const rows = await query(`${movementSelect} WHERE sm.id = ? LIMIT 1`, [id]);
+  return movementRow(rows[0]);
+};
+
 const recordMovement = async (req, res) => {
   try {
     const { product, type, quantity, reason } = req.body;
@@ -13,77 +26,81 @@ const recordMovement = async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    // Delta calculation
     let delta = Number(quantity);
     if (type === 'OUT') {
       delta = -Math.abs(delta);
     } else if (type === 'IN') {
       delta = Math.abs(delta);
-    } else if (type === 'ADJUSTMENT') {
-      // Keep delta as passed (+ or -)
-    } else {
+    } else if (type !== 'ADJUSTMENT') {
       return res.status(400).json({ message: 'Invalid movement type' });
     }
 
-    // Check if product exists
-    const existingProduct = await Product.findById(product);
-    if (!existingProduct) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
+    const movementId = await transaction(async (connection) => {
+      const [products] = await connection.execute(
+        'SELECT id, current_quantity FROM products WHERE id = ? FOR UPDATE',
+        [product]
+      );
+      const existingProduct = products[0];
 
-    // Prevent stock going below 0
-    if (existingProduct.currentQuantity + delta < 0) {
-      return res.status(400).json({ message: 'Movement would cause negative stock' });
-    }
+      if (!existingProduct) {
+        const error = new Error('Product not found');
+        error.status = 404;
+        throw error;
+      }
 
-    // Create the movement
-    const movement = await StockMovement.create({
-      product,
-      type,
-      quantity: delta,
-      reason,
-      performedBy: req.user.id
+      if (Number(existingProduct.current_quantity) + delta < 0) {
+        const error = new Error('Movement would cause negative stock');
+        error.status = 400;
+        throw error;
+      }
+
+      const id = createId();
+      await connection.execute(
+        `INSERT INTO stock_movements (id, product_id, type, quantity, reason, performed_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, product, type, delta, reason, req.user.id]
+      );
+
+      await connection.execute(
+        'UPDATE products SET current_quantity = current_quantity + ? WHERE id = ?',
+        [delta, product]
+      );
+
+      return id;
     });
 
-    // Update the product quantity
-    existingProduct.currentQuantity += delta;
-    await existingProduct.save();
-
-    // Populate for response
-    const populatedMovement = await StockMovement.findById(movement._id)
-      .populate('product', 'name sku')
-      .populate('performedBy', 'name email');
-
+    const populatedMovement = await findMovement(movementId);
     res.status(201).json(populatedMovement);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.status || 500).json({ message: error.message });
   }
 };
 
-// @desc    Get all stock movements
-// @route   GET /api/movements
-// @access  Private
 const getMovements = async (req, res) => {
   try {
     const { product, startDate, endDate } = req.query;
-    let query = {};
+    const filters = [];
+    const params = [];
 
     if (product) {
-      query.product = product;
+      filters.push('sm.product_id = ?');
+      params.push(product);
     }
 
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
+    if (startDate) {
+      filters.push('sm.created_at >= ?');
+      params.push(startDate);
     }
 
-    const movements = await StockMovement.find(query)
-      .populate('product', 'name sku')
-      .populate('performedBy', 'name email')
-      .sort({ createdAt: -1 });
+    if (endDate) {
+      filters.push('sm.created_at <= ?');
+      params.push(endDate);
+    }
 
-    res.status(200).json(movements);
+    const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+    const movements = await query(`${movementSelect} ${where} ORDER BY sm.created_at DESC`, params);
+
+    res.status(200).json(movements.map(movementRow));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -4,9 +4,9 @@ import ActivityTimeline from "../components/ActivityTimeline";
 export default function ActivityLogsPage({ transactions }) {
   const activities = useMemo(
     () =>
-      [...transactions]
+      [...(transactions || [])]
         .map(t => ({...t, date: t.createdAt || t.date || new Date().toISOString()}))
-        .sort((a, b) => b.date.localeCompare(a.date))
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
         .map((item) => ({
           id: item.id,
           action: `${item.type} of ${item.quantity} units (Ref: ${item.referenceId || item.reason})`,

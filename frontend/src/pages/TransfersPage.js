@@ -129,7 +129,7 @@ export default function TransfersPage({ transfers, warehouses, tiles, saveTransf
         </form>
       </section>
 
-      <DataTable columns={columns} data={[...transfersWithNames].sort((a, b) => b.createdAt.localeCompare(a.createdAt))} />
+      <DataTable columns={columns} data={[...transfersWithNames].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))} />
     </div>
   );
 }

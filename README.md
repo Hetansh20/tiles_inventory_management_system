@@ -1,6 +1,6 @@
 # Welcome Ceramic - Tiles Inventory Management System
 
-Welcome Ceramic is a robust, full-stack enterprise application designed to streamline and automate the operations of a ceramic tiles business. Built on the MERN stack (MongoDB, Express.js, React, Node.js), this system provides real-time visibility into inventory levels, granular role-based access controls, and tamper-proof security auditing.
+Welcome Ceramic is a robust, full-stack enterprise application designed to streamline and automate the operations of a ceramic tiles business. Built with MySQL, Express.js, React, and Node.js, this system provides real-time visibility into inventory levels, granular role-based access controls, and tamper-proof security auditing.
 
 ## 🚀 Key Features
 
@@ -15,7 +15,7 @@ Welcome Ceramic is a robust, full-stack enterprise application designed to strea
 
 - **Frontend:** React.js, Tailwind CSS, React Router, React Toastify
 - **Backend:** Node.js, Express.js, JWT Authentication
-- **Database:** MongoDB, Mongoose (v9.x)
+- **Database:** MySQL, mysql2
 
 ## 📁 File Structure
 
@@ -26,7 +26,6 @@ tiles_inventory_management_system/
 │   ├── config/               # Database connection setup
 │   ├── controllers/          # API request handlers (Products, Users, etc.)
 │   ├── middleware/           # JWT verification and Role authorization
-│   ├── models/               # Mongoose schemas (User, Product, AuditLog, etc.)
 │   ├── routes/               # Express API route definitions
 │   ├── services/             # Background services (Audit Logging service)
 │   ├── server.js             # Main server entry point
@@ -56,7 +55,7 @@ sequenceDiagram
     participant Auth Middleware
     participant Controller
     participant Audit Service
-    participant MongoDB
+    participant MySQL
 
     User->>Frontend (React): Modifies Product Data (Clicks Save)
     Frontend (React)->>API (Express): POST /api/products (with JWT)
@@ -67,13 +66,13 @@ sequenceDiagram
         Frontend (React)-->>User: Redirect to Login / Show Permission Banner
     else Authorized
         Auth Middleware->>Controller: Proceed with req.user
-        Controller->>MongoDB: Check for Duplicates (e.g., SKU)
-        Controller->>MongoDB: Save/Update Product Document
-        MongoDB-->>Controller: Return Updated Document
+        Controller->>MySQL: Check for Duplicates (e.g., SKU)
+        Controller->>MySQL: Save/Update Product Rows
+        MySQL-->>Controller: Return Updated Rows
         
         Note over Controller,Audit Service: Automated Audit Logging
         Controller->>Audit Service: logAction(user, module, action, before, after)
-        Audit Service->>MongoDB: Append Immutable AuditLog Entry
+        Audit Service->>MySQL: Append Immutable Audit Log Entry
         
         Controller-->>Frontend (React): 201 Created / 200 OK
         Frontend (React)-->>User: Show Success Toast & Update UI Table
@@ -91,7 +90,11 @@ sequenceDiagram
    Create a `.env` file in the `backend` directory:
    ```env
    PORT=5000
-   MONGO_URI=mongodb://localhost:27017/sanitary_ware_inventory
+   MYSQL_HOST=localhost
+   MYSQL_PORT=3306
+   MYSQL_USER=root
+   MYSQL_PASSWORD=your_mysql_password
+   MYSQL_DATABASE=tiles_inventory_management
    JWT_SECRET=your_super_secret_key
    ```
 3. **Setup the Frontend:**
@@ -105,4 +108,4 @@ sequenceDiagram
    - Terminal 2 (Frontend): `cd frontend && npm run dev`
 
 5. **Initial Admin Access:**
-   Ensure you have a MongoDB instance running. The system requires an initial admin user to access the dashboard and assign roles. A seeding script can be used to upsert the default admin account.
+   Ensure you have a MySQL server running. The backend will create the configured database and tables automatically if the MySQL user has the required privileges. The system requires an initial admin user to access the dashboard and assign roles.

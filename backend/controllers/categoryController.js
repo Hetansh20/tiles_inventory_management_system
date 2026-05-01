@@ -1,66 +1,71 @@
-const Category = require('../models/category');
+const { query } = require('../config/db');
+const { categoryRow, createId } = require('../utils/sqlHelpers');
 const { logAction } = require('../services/auditService');
 
-// Get all categories
+const findCategory = async (id) => {
+  const rows = await query('SELECT * FROM categories WHERE id = ? LIMIT 1', [id]);
+  return categoryRow(rows[0]);
+};
+
 exports.getCategories = async (req, res) => {
   try {
-    const categories = await Category.find().sort({ name: 1 });
-    res.json(categories);
+    const categories = await query('SELECT * FROM categories ORDER BY name ASC');
+    res.json(categories.map(categoryRow));
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching categories', error: error.message });
   }
 };
 
-// Create a new category
 exports.createCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
-    
-    // Check if category already exists
-    const existingCategory = await Category.findOne({ name: new RegExp('^' + name + '$', 'i') });
-    if (existingCategory) {
+
+    const existingCategories = await query('SELECT id FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1', [name]);
+    if (existingCategories.length) {
       return res.status(400).json({ message: 'Category with this name already exists' });
     }
 
-    const category = new Category({ name, description });
-    await category.save();
-    
+    const id = createId();
+    await query(
+      'INSERT INTO categories (id, name, description) VALUES (?, ?, ?)',
+      [id, name, description || '']
+    );
+
+    const category = await findCategory(id);
     await logAction(req.user.id, 'categories', 'CREATE', category._id, null, category);
-    
+
     res.status(201).json(category);
   } catch (error) {
     res.status(500).json({ message: 'Server error creating category', error: error.message });
   }
 };
 
-// Update a category
 exports.updateCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
     const categoryId = req.params.id;
 
-    // Check if name is being changed to an existing name
     if (name) {
-      const existingCategory = await Category.findOne({ 
-        name: new RegExp('^' + name + '$', 'i'),
-        _id: { $ne: categoryId }
-      });
-      if (existingCategory) {
+      const existingCategories = await query(
+        'SELECT id FROM categories WHERE LOWER(name) = LOWER(?) AND id <> ? LIMIT 1',
+        [name, categoryId]
+      );
+      if (existingCategories.length) {
         return res.status(400).json({ message: 'Another category with this name already exists' });
       }
     }
 
-    const oldCategory = await Category.findById(categoryId);
+    const oldCategory = await findCategory(categoryId);
     if (!oldCategory) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    const category = await Category.findByIdAndUpdate(
-      categoryId,
-      { name, description },
-      { returnDocument: 'after', runValidators: true }
+    await query(
+      'UPDATE categories SET name = ?, description = ? WHERE id = ?',
+      [name || oldCategory.name, description !== undefined ? description : oldCategory.description, categoryId]
     );
 
+    const category = await findCategory(categoryId);
     await logAction(req.user.id, 'categories', 'UPDATE', category._id, oldCategory, category);
 
     res.json(category);
@@ -69,19 +74,17 @@ exports.updateCategory = async (req, res) => {
   }
 };
 
-// Delete a category
 exports.deleteCategory = async (req, res) => {
   try {
-    const category = await Category.findByIdAndDelete(req.params.id);
-    
+    const category = await findCategory(req.params.id);
+
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
+    await query('DELETE FROM categories WHERE id = ?', [req.params.id]);
     await logAction(req.user.id, 'categories', 'DELETE', category._id, category, null);
 
-    // Ideally, we would also check if any products are using this category before deleting.
-    // For this implementation, we will just delete it.
     res.json({ message: 'Category deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server error deleting category', error: error.message });

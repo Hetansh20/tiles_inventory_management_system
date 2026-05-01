@@ -1,81 +1,134 @@
-const Product = require('../models/product');
+const { query } = require('../config/db');
+const { createId, productRow } = require('../utils/sqlHelpers');
 const { logAction } = require('../services/auditService');
 
-// Get all products (active and inactive, though frontend can filter)
+const productSelect = `
+  SELECT
+    p.*,
+    c.id AS category_id,
+    c.name AS category_name,
+    c.description AS category_description
+  FROM products p
+  LEFT JOIN categories c ON c.id = p.category_id
+`;
+
+const findProduct = async (id) => {
+  const rows = await query(`${productSelect} WHERE p.id = ? LIMIT 1`, [id]);
+  return productRow(rows[0]);
+};
+
 exports.getProducts = async (req, res) => {
   try {
-    // Populate the category field to return full category objects
-    const products = await Product.find().populate('category', 'name description').sort({ name: 1 });
-    res.json(products);
+    const products = await query(`${productSelect} ORDER BY p.name ASC`);
+    res.json(products.map(productRow));
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching products', error: error.message });
   }
 };
 
-// Create a new product
 exports.createProduct = async (req, res) => {
   try {
-    const { name, sku, category, supplier, unitOfMeasure, currentQuantity, lowStockThreshold, costPrice, description, imageUrl, size } = req.body;
-    
-    const existingSku = await Product.findOne({ sku: new RegExp('^' + sku + '$', 'i') });
-    if (existingSku) {
-      return res.status(400).json({ message: 'Product with this SKU already exists' });
-    }
-
-    const product = new Product({
+    const {
       name,
       sku,
       category,
       supplier,
       unitOfMeasure,
-      currentQuantity: currentQuantity || 0, // default 0 if not provided
-      lowStockThreshold: lowStockThreshold || 10,
+      currentQuantity,
+      lowStockThreshold,
       costPrice,
       description,
       imageUrl,
       size
-    });
+    } = req.body;
 
-    await product.save();
-    
-    // Populate before returning
-    const populatedProduct = await Product.findById(product._id).populate('category', 'name description');
-    
-    await logAction(req.user.id, 'products', 'CREATE', product._id, null, populatedProduct);
-    
-    res.status(201).json(populatedProduct);
+    const existingSkus = await query('SELECT id FROM products WHERE LOWER(sku) = LOWER(?) LIMIT 1', [sku]);
+    if (existingSkus.length) {
+      return res.status(400).json({ message: 'Product with this SKU already exists' });
+    }
+
+    const id = createId();
+    await query(
+      `INSERT INTO products
+        (id, name, sku, category_id, supplier, unit_of_measure, current_quantity, low_stock_threshold, cost_price, description, image_url, size)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        name,
+        sku,
+        category,
+        supplier,
+        unitOfMeasure,
+        Number(currentQuantity || 0),
+        Number(lowStockThreshold || 10),
+        Number(costPrice),
+        description || '',
+        imageUrl || '',
+        size || ''
+      ]
+    );
+
+    const product = await findProduct(id);
+    await logAction(req.user.id, 'products', 'CREATE', product._id, null, product);
+
+    res.status(201).json(product);
   } catch (error) {
     res.status(500).json({ message: 'Server error creating product', error: error.message });
   }
 };
 
-// Update a product
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description, imageUrl, size } = req.body;
+    const {
+      name,
+      sku,
+      category,
+      supplier,
+      unitOfMeasure,
+      lowStockThreshold,
+      costPrice,
+      description,
+      imageUrl,
+      size
+    } = req.body;
     const productId = req.params.id;
 
     if (sku) {
-      const existingSku = await Product.findOne({ 
-        sku: new RegExp('^' + sku + '$', 'i'),
-        _id: { $ne: productId }
-      });
-      if (existingSku) {
+      const existingSkus = await query(
+        'SELECT id FROM products WHERE LOWER(sku) = LOWER(?) AND id <> ? LIMIT 1',
+        [sku, productId]
+      );
+      if (existingSkus.length) {
         return res.status(400).json({ message: 'Another product with this SKU already exists' });
       }
     }
 
-    const oldProduct = await Product.findById(productId);
+    const oldProduct = await findProduct(productId);
     if (!oldProduct) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const product = await Product.findByIdAndUpdate(
-      productId,
-      { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description, imageUrl, size },
-      { returnDocument: 'after', runValidators: true }
-    ).populate('category', 'name description');
+    await query(
+      `UPDATE products
+       SET name = ?, sku = ?, category_id = ?, supplier = ?, unit_of_measure = ?,
+           low_stock_threshold = ?, cost_price = ?, description = ?, image_url = ?, size = ?
+       WHERE id = ?`,
+      [
+        name || oldProduct.name,
+        sku || oldProduct.sku,
+        category || oldProduct.category?._id || null,
+        supplier || oldProduct.supplier,
+        unitOfMeasure || oldProduct.unitOfMeasure,
+        lowStockThreshold !== undefined ? Number(lowStockThreshold) : oldProduct.lowStockThreshold,
+        costPrice !== undefined ? Number(costPrice) : oldProduct.costPrice,
+        description !== undefined ? description : oldProduct.description,
+        imageUrl !== undefined ? imageUrl : oldProduct.imageUrl,
+        size !== undefined ? size : oldProduct.size,
+        productId
+      ]
+    );
 
+    const product = await findProduct(productId);
     await logAction(req.user.id, 'products', 'UPDATE', product._id, oldProduct, product);
 
     res.json(product);
@@ -84,20 +137,16 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Soft delete a product
 exports.deleteProduct = async (req, res) => {
   try {
-    const oldProduct = await Product.findById(req.params.id);
+    const oldProduct = await findProduct(req.params.id);
     if (!oldProduct) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { returnDocument: 'after' }
-    ).populate('category', 'name description');
-    
+    await query('UPDATE products SET is_active = 0 WHERE id = ?', [req.params.id]);
+    const product = await findProduct(req.params.id);
+
     await logAction(req.user.id, 'products', 'DELETE', product._id, oldProduct, product);
 
     res.json({ message: 'Product soft-deleted successfully', product });
@@ -106,24 +155,19 @@ exports.deleteProduct = async (req, res) => {
   }
 };
 
-// Toggle product status (active/inactive)
 exports.toggleProductStatus = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await findProduct(req.params.id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const oldState = JSON.parse(JSON.stringify(product));
-    
-    product.isActive = !product.isActive;
-    await product.save();
-    
-    const populatedProduct = await Product.findById(product._id).populate('category', 'name description');
+    await query('UPDATE products SET is_active = ? WHERE id = ?', [product.isActive ? 0 : 1, req.params.id]);
+    const updatedProduct = await findProduct(req.params.id);
 
-    await logAction(req.user.id, 'products', 'UPDATE', product._id, oldState, populatedProduct);
+    await logAction(req.user.id, 'products', 'UPDATE', updatedProduct._id, product, updatedProduct);
 
-    res.json(populatedProduct);
+    res.json(updatedProduct);
   } catch (error) {
     res.status(500).json({ message: 'Server error toggling product status', error: error.message });
   }
