@@ -11,7 +11,7 @@ export default function LoginPage({ onLogin }) {
     event.preventDefault();
     const result = await onLogin({ username: username.trim().toLowerCase(), password });
     if (!result.ok) {
-      setError(result.message || "Invalid credentials. Use admin/admin123 or staff/staff123");
+      setError(result.message || "Invalid credentials. Try Again!");
       return;
     }
     setError("");
