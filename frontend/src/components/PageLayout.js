@@ -35,7 +35,7 @@ export default function PageLayout({ children, onLogout, currentUser, alerts, tr
     [location.pathname]
   );
 
-  const unreadCount = alerts.filter((alert) => alert.status === "open").length;
+  const unreadCount = alerts.filter((alert) => alert.status === "open").length + (transactions?.slice(0, 5).length || 0);
 
   const groupedResults = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();

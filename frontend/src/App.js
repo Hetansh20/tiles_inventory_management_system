@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import PageLayout from "./components/PageLayout";
 import ProfileModal from "./components/ProfileModal";
+import SettingsModal from "./components/SettingsModal";
 import LoadingState from "./components/LoadingState";
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider } from "./context/AuthContext";
@@ -60,6 +61,12 @@ function AppShell() {
   const [orders, setOrders] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [isProfileOpen, setProfileOpen] = useState(false);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [appSettings, setAppSettings] = useState({
+    currency: "₹",
+    notifications: true,
+    companyName: "Welcome Ceramic"
+  });
 
   // Auto-generate alerts from inventory
   useEffect(() => {
@@ -341,6 +348,11 @@ function AppShell() {
     }
   };
 
+  const updateSettings = (newData) => {
+    setAppSettings(newData);
+    toast.success("Settings applied successfully!");
+  };
+
 
 
   const bulkInventoryUpdate = (ids, delta) => {
@@ -394,7 +406,7 @@ function AppShell() {
                   theme={theme}
                   onToggleTheme={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
                   onProfileClick={() => setProfileOpen(true)}
-                  onSettingsClick={() => toast.info("Settings panel coming soon!")}
+                  onSettingsClick={() => setSettingsOpen(true)}
                 >
                   <Routes>
                     <Route
@@ -514,6 +526,14 @@ function AppShell() {
         onClose={() => setProfileOpen(false)} 
         user={currentUser}
         onUpdate={updateProfile}
+      />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={appSettings}
+        onUpdate={updateSettings}
+        theme={theme}
+        onToggleTheme={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
       />
       <ToastContainer position="top-right" autoClose={2500} newestOnTop theme={theme === "dark" ? "dark" : "light"} />
     </Router>
