@@ -30,7 +30,6 @@ const navItems = [
   { path: "/transactions", label: "Transactions", icon: FiActivity, roles: ["admin", "staff"] },
   { path: "/alerts", label: "Alerts", icon: FiAlertTriangle, roles: ["admin", "staff"] },
   { path: "/reports", label: "Reports", icon: FiPieChart, roles: ["admin", "staff"] },
-  { path: "/audit-logs", label: "Audit Logs", icon: FiShield, roles: ["admin"] },
   { path: "/activity", label: "Activity Logs", icon: FiClock, roles: ["admin", "staff"] },
 ];
 

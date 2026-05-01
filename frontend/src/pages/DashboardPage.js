@@ -20,7 +20,7 @@ const palette = ["#0ea5e9", "#14b8a6", "#f59e0b", "#f43f5e", "#6366f1", "#22c55e
 
 export default function DashboardPage({ tiles, inventory, suppliers, warehouses, transactions, alerts, resolveAlert, orders, currentUser }) {
   const lowStockCount = inventory.filter((item) => item.quantityInStock <= item.reorderLevel).length;
-  const pendingOrdersCount = orders?.filter((o) => o.status === "pending").length || 0;
+  const pendingOrdersCount = orders?.filter((o) => ["Draft", "Sent", "Partially Received"].includes(o.status)).length || 0;
   const totalStockValue = inventory.reduce((sum, item) => sum + (item.quantityInStock * (tiles.find(t=>t.id===item.tileId)?.costPrice || 0)), 0);
   const activeAlerts = alerts.filter((alert) => alert.status === "open");
 
@@ -38,17 +38,17 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
   const monthlyFlow = useMemo(() => {
     const map = new Map();
     transactions.forEach((item) => {
-      const month = item.date.slice(0, 7);
+      const month = (item.createdAt || item.date || new Date().toISOString()).slice(0, 7);
       const existing = map.get(month) || { month, stockIn: 0, stockOut: 0 };
-      if (item.type === "stock-in") existing.stockIn += item.quantity;
-      if (item.type === "stock-out") existing.stockOut += item.quantity;
+      if (item.type === "IN") existing.stockIn += item.quantity;
+      if (item.type === "OUT") existing.stockOut += item.quantity;
       map.set(month, existing);
     });
     return Array.from(map.values()).sort((a, b) => a.month.localeCompare(b.month));
   }, [transactions]);
 
   const topSelling = useMemo(() => {
-    const sold = transactions.filter((item) => item.type === "stock-out");
+    const sold = transactions.filter((item) => item.type === "OUT");
     const map = new Map();
     sold.forEach((item) => {
       map.set(item.tileId, (map.get(item.tileId) || 0) + item.quantity);
@@ -72,13 +72,13 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
   ];
 
   const timeline = [...transactions]
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a, b) => (b.createdAt || b.date || '').localeCompare(a.createdAt || a.date || ''))
     .slice(0, 8)
     .map((item) => ({
       id: item.id,
       action: `${item.type} · ${item.quantity} units · ${item.reason}`,
-      performedBy: item.performedBy || "Unknown",
-      date: item.date,
+      performedBy: item.performedBy?.name || item.performedBy || "Unknown",
+      date: item.createdAt || item.date,
     }));
 
   return (
@@ -141,7 +141,7 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
       <section className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">Recent Stock Movements</h2>
-          <DataTable columns={recentColumns} data={[...transactions].sort((a, b) => b.date.localeCompare(a.date))} pageSize={10} />
+          <DataTable columns={recentColumns} data={[...transactions].map(t => ({...t, date: t.createdAt || t.date })).sort((a, b) => (b.date || '').localeCompare(a.date || ''))} pageSize={10} />
         </div>
 
         <div className="space-y-6">
@@ -208,8 +208,8 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
 }
 
 function typeTone(type) {
-  if (type === "stock-in") return "success";
-  if (type === "stock-out") return "warning";
-  if (type === "damage") return "danger";
-  return "info";
+  if (type === "IN") return "success";
+  if (type === "OUT") return "warning";
+  if (type === "ADJUSTMENT") return "info";
+  return "danger";
 }

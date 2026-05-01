@@ -22,7 +22,6 @@ const UsersPage = lazy(() => import("./pages/UsersPage"));
 const WarehousesPage = lazy(() => import("./pages/WarehousesPage"));
 const ActivityLogsPage = lazy(() => import("./pages/ActivityLogsPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
-const AuditLogsPage = lazy(() => import("./pages/AuditLogsPage"));
 
 import { apiCall } from "./utils/api";
 
@@ -45,6 +44,16 @@ function AppShell() {
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [inventory, setInventory] = useState([]);
+
+  useEffect(() => {
+    setInventory(products.map(p => ({
+      id: p.id,
+      tileId: p.id,
+      warehouseId: warehouses.length > 0 ? warehouses[0].id : "default",
+      quantityInStock: p.currentQuantity || 0,
+      reorderLevel: p.lowStockThreshold || 10
+    })));
+  }, [products, warehouses]);
   const [movements, setMovements] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -432,14 +441,7 @@ function AppShell() {
                     />
                     <Route path="/alerts" element={<AlertsPage alerts={alerts} tiles={products} warehouses={warehouses} resolveAlert={resolveAlert} canEdit={canManageProducts} />} />
                     <Route path="/reports" element={<ReportsPage products={products} movements={movements} users={users} />} />
-                    <Route
-                      path="/audit-logs"
-                      element={
-                        <PrivateRoute allowedRoles={["admin"]}>
-                          <AuditLogsPage />
-                        </PrivateRoute>
-                      }
-                    />
+
                     <Route path="/activity" element={<ActivityLogsPage transactions={movements} />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

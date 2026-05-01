@@ -5,11 +5,12 @@ export default function ActivityLogsPage({ transactions }) {
   const activities = useMemo(
     () =>
       [...transactions]
+        .map(t => ({...t, date: t.createdAt || t.date || new Date().toISOString()}))
         .sort((a, b) => b.date.localeCompare(a.date))
         .map((item) => ({
           id: item.id,
-          action: `${item.type} of ${item.quantity} units (Ref: ${item.referenceId})`,
-          performedBy: item.performedBy || "Unknown",
+          action: `${item.type} of ${item.quantity} units (Ref: ${item.referenceId || item.reason})`,
+          performedBy: item.performedBy?.name || item.performedBy || "Unknown",
           date: item.date,
         })),
     [transactions]
