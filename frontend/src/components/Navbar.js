@@ -13,10 +13,13 @@ export default function Navbar({
   transactions,
   theme,
   onToggleTheme,
+  onProfileClick,
+  onSettingsClick,
   currentUser,
 }) {
   const [openNotifications, setOpenNotifications] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
+
 
   const recentTransactions = useMemo(
     () =>
@@ -26,6 +29,18 @@ export default function Navbar({
         .slice(0, 5),
     [transactions]
   );
+
+  const recentTransactions = useMemo(() => {
+    if (!transactions) return [];
+    return [...transactions]
+      .sort((a, b) => {
+        const dateA = a.createdAt || a.date || "";
+        const dateB = b.createdAt || b.date || "";
+        return dateB.localeCompare(dateA);
+      })
+      .slice(0, 5);
+  }, [transactions]);
+
 
   // Note: For full logout context, we will trigger page refresh or we expect the app layer to handle it.
   const handleLogout = () => {
@@ -115,10 +130,16 @@ export default function Navbar({
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-2">
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-100">My Account</p>
                 </div>
-                <button className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
+                <button 
+                  onClick={() => { onProfileClick(); setOpenProfile(false); }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
                   <FiUser size={16} /> Profile
                 </button>
-                <button className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
+                <button 
+                  onClick={() => { onSettingsClick(); setOpenProfile(false); }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
                   <FiSettings size={16} /> Settings
                 </button>
                 <button 

@@ -29,7 +29,7 @@ export default function OrdersPage({ orders, suppliers, tiles, saveOrder, update
   const columns = [
     { key: "id", header: "PO Number", render: (row) => <span className="font-bold">PO-{row.id.substring(row.id.length - 6).toUpperCase()}</span> },
     { key: "supplierName", header: "Supplier" },
-    { key: "totalAmount", header: "Total Value", render: (row) => `Rs ${Number(row.totalAmount).toLocaleString()}` },
+    { key: "totalAmount", header: "Total Value", render: (row) => `₹${Number(row.totalAmount).toLocaleString()}` },
     { key: "progress", header: "Progress", render: (row) => <span className="text-sm text-slate-500">{row.receivedItems} / {row.totalItems} rcvd</span> },
     { key: "expectedDeliveryDate", header: "Expected", render: (row) => row.expectedDeliveryDate ? new Date(row.expectedDeliveryDate).toLocaleDateString() : "N/A" },
     {

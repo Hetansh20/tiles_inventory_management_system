@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import PageLayout from "./components/PageLayout";
+import ProfileModal from "./components/ProfileModal";
+import SettingsModal from "./components/SettingsModal";
 import LoadingState from "./components/LoadingState";
 import PrivateRoute from "./components/PrivateRoute";
 import { AuthProvider } from "./context/AuthContext";
@@ -58,6 +60,35 @@ function AppShell() {
   const [transfers, setTransfers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [isProfileOpen, setProfileOpen] = useState(false);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [appSettings, setAppSettings] = useState({
+    currency: "₹",
+    notifications: true,
+    companyName: "Welcome Ceramic"
+  });
+
+  // Auto-generate alerts from inventory
+  useEffect(() => {
+    setAlerts(prev => {
+      const resolvedIds = prev.filter(a => a.status === 'resolved').map(a => a.id);
+      return products
+        .filter(p => p.currentQuantity <= (p.lowStockThreshold || 10))
+        .map(p => {
+          const id = `alert-${p.id}`;
+          const existing = prev.find(a => a.id === id);
+          return {
+            id,
+            tileId: p.id,
+            warehouseId: warehouses.length > 0 ? warehouses[0].id : (warehouses[0]?._id || "Main"),
+            currentStock: p.currentQuantity,
+            reorderLevel: p.lowStockThreshold || 10,
+            status: resolvedIds.includes(id) ? "resolved" : "open",
+            createdAt: existing?.createdAt || new Date().toISOString()
+          };
+        });
+    });
+  }, [products, warehouses]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -304,6 +335,24 @@ function AppShell() {
     toast.warning("Alert marked as resolved");
   };
 
+  const updateProfile = async (formData) => {
+    try {
+      if (formData.name !== currentUser.name) {
+        toast.success("Profile name updated (Preview)");
+      }
+      if (formData.newPassword) {
+        toast.info("Password change request submitted");
+      }
+    } catch (e) {
+      toast.error("Profile update failed");
+    }
+  };
+
+  const updateSettings = (newData) => {
+    setAppSettings(newData);
+    toast.success("Settings applied successfully!");
+  };
+
 
 
   const bulkInventoryUpdate = (ids, delta) => {
@@ -356,6 +405,8 @@ function AppShell() {
                   searchData={searchData}
                   theme={theme}
                   onToggleTheme={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+                  onProfileClick={() => setProfileOpen(true)}
+                  onSettingsClick={() => setSettingsOpen(true)}
                 >
                   <Routes>
                     <Route
@@ -470,6 +521,20 @@ function AppShell() {
           />
         </Routes>
       </Suspense>
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setProfileOpen(false)} 
+        user={currentUser}
+        onUpdate={updateProfile}
+      />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={appSettings}
+        onUpdate={updateSettings}
+        theme={theme}
+        onToggleTheme={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+      />
       <ToastContainer position="top-right" autoClose={2500} newestOnTop theme={theme === "dark" ? "dark" : "light"} />
     </Router>
   );
