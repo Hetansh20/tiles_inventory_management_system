@@ -146,10 +146,12 @@ function AppShell() {
         const updated = await apiCall(`/products/${product.id}`, { method: "PUT", body: JSON.stringify(product) });
         setProducts((prev) => prev.map((item) => (item.id === updated._id ? { ...updated, id: updated._id } : item)));
         toast.success("Product updated");
+        return updated;
       } else {
         const created = await apiCall(`/products`, { method: "POST", body: JSON.stringify(product) });
         setProducts((prev) => [...prev, { ...created, id: created._id }]);
         toast.success("Product created");
+        return created;
       }
     } catch (error) {
       toast.error(error.message || "Failed to save product");

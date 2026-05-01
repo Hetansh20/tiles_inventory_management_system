@@ -7,6 +7,7 @@ import StatusBadge from "../components/StatusBadge";
 import PermissionBanner from "../components/PermissionBanner";
 import Button from "../components/Button";
 import useDebounce from "../hooks/useDebounce";
+import { QRCodeCanvas } from "qrcode.react";
 
 const defaultForm = {
   name: "",
@@ -19,6 +20,8 @@ const defaultForm = {
   costPrice: 0,
   description: "",
   isActive: true,
+  imageUrl: "",
+  size: "",
 };
 
 export default function ProductsPage({
@@ -36,6 +39,8 @@ export default function ProductsPage({
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [generatedProduct, setGeneratedProduct] = useState(null);
 
   const debouncedQuery = useDebounce(query, 250);
 
@@ -124,18 +129,23 @@ export default function ProductsPage({
     return Object.keys(nextErrors).length === 0;
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     if (!validate()) return;
 
-    saveProduct({
+    const saved = await saveProduct({
       ...form,
       id: editingProduct?._id || editingProduct?.id,
       costPrice: Number(form.costPrice),
       lowStockThreshold: Number(form.lowStockThreshold),
-      currentQuantity: Number(form.currentQuantity), // Even though read-only, ensure it's a number
+      currentQuantity: Number(form.currentQuantity), // Ensure it's a number
     });
     setModalOpen(false);
+
+    if (saved && !editingProduct) {
+      setGeneratedProduct(saved);
+      setQrModalOpen(true);
+    }
   };
 
   return (
@@ -161,9 +171,35 @@ export default function ProductsPage({
         emptyTitle="No products match your filters"
       />
 
-      <FormModal isOpen={isModalOpen} title={editingProduct ? "Edit Product" : "Add Product"} onClose={() => setModalOpen(false)}>
+      <FormModal isOpen={isModalOpen} title={editingProduct ? "Edit Product" : "Add New Item"} onClose={() => setModalOpen(false)}>
         <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={submit}>
-          <Field label="Name" value={form.name} onChange={(val) => setForm({ ...form, name: val })} error={errors.name} required />
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Add Photo</label>
+            <div className="flex items-center gap-4">
+              {form.imageUrl ? (
+                <img src={form.imageUrl} alt="Preview" className="h-24 w-24 object-cover rounded-xl border border-slate-200" />
+              ) : (
+                <div className="h-24 w-24 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-400">
+                  No Photo
+                </div>
+              )}
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setForm({ ...form, imageUrl: reader.result });
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
+              />
+            </div>
+          </div>
+          
+          <Field label="Item Name" value={form.name} onChange={(val) => setForm({ ...form, name: val })} error={errors.name} required />
           <Field label="SKU" value={form.sku} onChange={(val) => setForm({ ...form, sku: val })} error={errors.sku} required />
           
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
@@ -197,21 +233,25 @@ export default function ProductsPage({
             </select>
           </label>
 
+          <Field label="Size" value={form.size} onChange={(val) => setForm({ ...form, size: val })} placeholder="e.g. 600x600 mm" />
           <Field label="Unit of Measure" value={form.unitOfMeasure} onChange={(val) => setForm({ ...form, unitOfMeasure: val })} required placeholder="e.g. pcs, boxes" />
-          <Field label="Cost Price" value={form.costPrice} onChange={(val) => setForm({ ...form, costPrice: val })} type="number" required error={errors.costPrice} />
           
-          <Field label="Low-Stock Threshold" value={form.lowStockThreshold} onChange={(val) => setForm({ ...form, lowStockThreshold: val })} type="number" required />
+          <div className="md:col-span-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4"><h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Pricing & Stock</h3></div>
+
+          <Field label="Price (₹/box)" value={form.costPrice} onChange={(val) => setForm({ ...form, costPrice: val })} type="number" required error={errors.costPrice} />
           
-          {/* READ ONLY QUANTITY */}
-          <label className="grid gap-1 text-sm font-semibold text-slate-700 opacity-70">
-            Current Quantity (Read-Only)
+          <label className={`grid gap-1 text-sm font-semibold text-slate-700 ${editingProduct ? "opacity-70" : ""}`}>
+            {editingProduct ? "Current Quantity (Read-Only)" : "Quantity (boxes)"}
             <input
               type="number"
-              disabled
+              disabled={!!editingProduct}
               value={form.currentQuantity}
-              className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm cursor-not-allowed dark:bg-slate-800 dark:border-slate-700"
+              onChange={(e) => setForm({ ...form, currentQuantity: e.target.value })}
+              className={`rounded-xl border border-slate-200 px-3 py-2.5 text-sm ${editingProduct ? "bg-slate-100 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700" : ""}`}
             />
           </label>
+
+          <Field label="Low-Stock Alert (boxes)" value={form.lowStockThreshold} onChange={(val) => setForm({ ...form, lowStockThreshold: val })} type="number" required />
 
           <label className="md:col-span-2 grid gap-1 text-sm font-semibold text-slate-700">
             Description
@@ -231,15 +271,33 @@ export default function ProductsPage({
             />
             Active Product
           </label>
-          <div className="md:col-span-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2">
+          <div className="md:col-span-2 flex justify-end gap-2 mt-4">
+            <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-4 py-3 font-semibold hover:bg-slate-50 transition">
               Cancel
             </button>
-            <button type="submit" className="rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2">
-              Save
+            <button type="submit" className="rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 font-semibold transition">
+              {editingProduct ? "Save Changes" : "Add Item & Generate QR"}
             </button>
           </div>
         </form>
+      </FormModal>
+
+      <FormModal isOpen={qrModalOpen} title="Item Added Successfully!" onClose={() => setQrModalOpen(false)}>
+        {generatedProduct && (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <p className="text-sm text-slate-600 text-center">Scan this QR code to quickly access product details in the future.</p>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+              <QRCodeCanvas value={generatedProduct.sku} size={200} />
+            </div>
+            <p className="font-bold text-lg">{generatedProduct.name}</p>
+            <p className="text-sm text-slate-500">SKU: {generatedProduct.sku}</p>
+            <div className="flex gap-2 w-full mt-4">
+              <button onClick={() => setQrModalOpen(false)} className="w-full rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 font-semibold transition">
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       </FormModal>
     </div>
   );

@@ -15,7 +15,7 @@ exports.getProducts = async (req, res) => {
 // Create a new product
 exports.createProduct = async (req, res) => {
   try {
-    const { name, sku, category, supplier, unitOfMeasure, currentQuantity, lowStockThreshold, costPrice, description } = req.body;
+    const { name, sku, category, supplier, unitOfMeasure, currentQuantity, lowStockThreshold, costPrice, description, imageUrl, size } = req.body;
     
     const existingSku = await Product.findOne({ sku: new RegExp('^' + sku + '$', 'i') });
     if (existingSku) {
@@ -31,7 +31,9 @@ exports.createProduct = async (req, res) => {
       currentQuantity: currentQuantity || 0, // default 0 if not provided
       lowStockThreshold: lowStockThreshold || 10,
       costPrice,
-      description
+      description,
+      imageUrl,
+      size
     });
 
     await product.save();
@@ -50,7 +52,7 @@ exports.createProduct = async (req, res) => {
 // Update a product
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description } = req.body;
+    const { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description, imageUrl, size } = req.body;
     const productId = req.params.id;
 
     if (sku) {
@@ -70,7 +72,7 @@ exports.updateProduct = async (req, res) => {
 
     const product = await Product.findByIdAndUpdate(
       productId,
-      { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description },
+      { name, sku, category, supplier, unitOfMeasure, lowStockThreshold, costPrice, description, imageUrl, size },
       { new: true, runValidators: true }
     ).populate('category', 'name description');
 
