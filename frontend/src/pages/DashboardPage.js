@@ -27,10 +27,11 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
   const stockByCategory = useMemo(() => {
     const map = new Map();
     tiles.forEach((tile) => {
+      const catName = tile.category?.name || "Uncategorized";
       const qty = inventory
         .filter((stock) => stock.tileId === tile.id)
         .reduce((sum, stock) => sum + stock.quantityInStock, 0);
-      map.set(tile.category, (map.get(tile.category) || 0) + qty);
+      map.set(catName, (map.get(catName) || 0) + qty);
     });
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [tiles, inventory]);
@@ -120,20 +121,26 @@ export default function DashboardPage({ tiles, inventory, suppliers, warehouses,
 
         <ChartCard title="Monthly Stock-In vs Stock-Out">
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyFlow}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#475569" opacity={0.35} />
-                <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={{ stroke: "#475569" }} />
-                <YAxis tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={{ stroke: "#475569" }} />
-                <Tooltip 
-                  cursor={{fill: 'rgba(255,255,255,0.05)'}} 
-                  contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: '12px', color: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }} 
-                  itemStyle={{ color: "#38bdf8", fontWeight: 'bold' }} 
-                />
-                <Bar dataKey="stockIn" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="stockOut" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {monthlyFlow.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyFlow}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" opacity={0.35} />
+                  <XAxis dataKey="month" tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={{ stroke: "#475569" }} />
+                  <YAxis tick={{ fill: "#94a3b8", fontSize: 12 }} axisLine={{ stroke: "#475569" }} />
+                  <Tooltip 
+                    cursor={{fill: 'rgba(255,255,255,0.05)'}} 
+                    contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: '12px', color: '#fff', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }} 
+                    itemStyle={{ color: "#38bdf8", fontWeight: 'bold' }} 
+                  />
+                  <Bar dataKey="stockIn" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="stockOut" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+                No transaction data available yet.
+              </div>
+            )}
           </div>
         </ChartCard>
       </section>

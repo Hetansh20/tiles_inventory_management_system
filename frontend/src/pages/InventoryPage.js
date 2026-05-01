@@ -7,10 +7,9 @@ import PermissionBanner from "../components/PermissionBanner";
 import useDebounce from "../hooks/useDebounce";
 import { exportToCsv, exportToExcel, printRows } from "../utils/exportUtils";
 
-export default function InventoryPage({ inventory, tiles, warehouses, canEdit, bulkInventoryUpdate }) {
+export default function InventoryPage({ inventory, tiles, warehouses, canEdit }) {
   const [query, setQuery] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
-  const [selectedRows, setSelectedRows] = useState([]);
 
   const debouncedQuery = useDebounce(query, 250);
 
@@ -57,12 +56,6 @@ export default function InventoryPage({ inventory, tiles, warehouses, canEdit, b
     ReorderLevel: item.reorderLevel,
   }));
 
-  const bulkActions = canEdit
-    ? [
-        { label: "+10 Stock", onClick: (ids) => { bulkInventoryUpdate(ids, 10); setSelectedRows([]); } },
-        { label: "-10 Stock", onClick: (ids) => { bulkInventoryUpdate(ids, -10); setSelectedRows([]); } },
-      ]
-    : [];
 
   return (
     <div className="space-y-4">
@@ -111,10 +104,6 @@ export default function InventoryPage({ inventory, tiles, warehouses, canEdit, b
         data={filtered}
         emptyTitle="No inventory records"
         emptyDescription="Add inventory to a warehouse to start tracking."
-        selectable={canEdit}
-        selectedRows={selectedRows}
-        onSelectedRowsChange={setSelectedRows}
-        bulkActions={bulkActions}
       />
     </div>
   );
