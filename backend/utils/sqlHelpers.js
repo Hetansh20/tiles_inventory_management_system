@@ -130,6 +130,37 @@ const movementRow = (row) => row && ({
   updatedAt: row.updated_at
 });
 
+const inventoryRow = (row) => row && ({
+  _id: row.id,
+  id: row.id,
+  productId: row.product_id,
+  product: row.product_id ? {
+    _id: row.product_id,
+    id: row.product_id,
+    name: row.product_name,
+    sku: row.product_sku,
+    image: row.product_image || '',
+    size: row.product_size || '',
+    categoryId: row.category_id,
+    categoryName: row.category_name || '',
+    unitOfMeasure: row.unit_of_measure,
+    costPrice: decimal(row.cost_price),
+    lowStockThreshold: Number(row.low_stock_threshold),
+    totalQuantity: Number(row.total_quantity)
+  } : null,
+  warehouseId: row.warehouse_id,
+  warehouse: row.warehouse_id ? {
+    _id: row.warehouse_id,
+    id: row.warehouse_id,
+    name: row.warehouse_name,
+    location: row.warehouse_location
+  } : null,
+  quantity: Number(row.quantity),
+  isLowStock: row.quantity <= row.low_stock_threshold,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
 module.exports = {
   bool,
   categoryRow,
@@ -137,6 +168,7 @@ module.exports = {
   createId,
   dateOnly,
   decimal,
+  inventoryRow,
   movementRow,
   parseJsonArray,
   productRow,

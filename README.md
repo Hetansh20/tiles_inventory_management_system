@@ -6,7 +6,15 @@ Welcome Ceramic is a robust, full-stack enterprise application designed to strea
 
 - **Granular Role-Based Access Control (RBAC):** Admins can dynamically grant or revoke specific module permissions (Products, Categories, Orders, Suppliers, etc.) for individual Staff members.
 - **Comprehensive Stock Management:** Track tiles, sanitary ware, categories, sizes, and unit measurements. Low stock alerts are automatically generated on the dashboard.
-- **Stock Movement Ledger:** A dedicated ledger tracks every "IN" and "OUT" movement of stock, automatically adjusting current quantities.
+- **Advanced Inventory Management:** Full-featured warehouse inventory system with:
+  - Multi-warehouse stock tracking (product_stocks per warehouse)
+  - Real-time low stock alerts and reorder management
+  - Stock transfers between warehouses with audit trail
+  - Inventory adjustments with reason tracking
+  - Batch import/export (CSV format)
+  - Comprehensive inventory reports and analytics
+  - Inventory reconciliation tools
+- **Stock Movement Ledger:** A dedicated ledger tracks every "IN", "OUT", and "ADJUSTMENT" movement of stock, automatically adjusting current quantities.
 - **Purchase Orders & Suppliers:** Create purchase orders linked to specific suppliers. When items are "Received" via a purchase order, the stock is automatically updated in the database.
 - **Immutable Audit Trail:** Every `CREATE`, `UPDATE`, and `DELETE` action performed by any user is automatically logged with timestamp, user ID, module name, and JSON diffs of the `before` and `after` states. This log is append-only and cannot be tampered with.
 - **Modern UI/UX:** A responsive, dark-mode-ready interface built with Tailwind CSS, featuring smooth transitions, dynamic modals, and interactive data tables.

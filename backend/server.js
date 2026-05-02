@@ -17,20 +17,20 @@ const userRoutes = require('./routes/userRoutes')
 const categoryRoutes = require('./routes/categoryRoutes')
 const productRoutes = require('./routes/productRoutes')
 const stockMovementRoutes = require('./routes/stockMovementRoutes')
-const inventoryRoutes = require('./routes/inventoryRoutes')
-
 const supplierRoutes = require('./routes/supplierRoutes')
 const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes')
 const warehouseRoutes = require('./routes/warehouseRoutes')
+const inventoryRoutes = require('./routes/inventoryRoutes')
+
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/categories', categoryRoutes)
 app.use('/api/products', productRoutes)
 app.use('/api/movements', stockMovementRoutes)
-app.use('/api/inventory', inventoryRoutes)
 app.use('/api/suppliers', supplierRoutes)
 app.use('/api/orders', purchaseOrderRoutes)
 app.use('/api/warehouses', warehouseRoutes)
+app.use('/api/inventory', inventoryRoutes)
 const PORT = process.env.PORT || 5000
 
 const startServer = async () => {
