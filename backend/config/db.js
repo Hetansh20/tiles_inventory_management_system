@@ -167,6 +167,28 @@ const initializeTables = async () => {
   }
 };
 
+const seedDefaultAdmin = async () => {
+  try {
+    const users = await query('SELECT id FROM users LIMIT 1');
+    if (users.length === 0) {
+      console.log('No users found. Seeding default admin...');
+      const bcrypt = require('bcryptjs');
+      const { createId } = require('../utils/sqlHelpers');
+      
+      const id = createId();
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      
+      await query(
+        'INSERT INTO users (id, name, email, password, role, is_active, permissions) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, 'Admin', 'admin@example.com', hashedPassword, 'admin', 1, JSON.stringify(['products', 'categories', 'suppliers', 'warehouses', 'transfers', 'orders', 'inventory', 'users'])]
+      );
+      console.log('Default admin created: admin@example.com / admin123');
+    }
+  } catch (error) {
+    console.error('Error seeding default admin:', error);
+  }
+};
+
 const connectDB = async () => {
   try {
     const database = getDatabaseName();
@@ -179,6 +201,8 @@ const connectDB = async () => {
     pool = mysql.createPool(getConnectionConfig(true));
     await initializeTables();
     console.log('MySQL Connected');
+    
+    await seedDefaultAdmin();
   } catch (error) {
     console.log('MySQL Connection Error:', error);
     process.exit(1);

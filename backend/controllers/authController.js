@@ -36,7 +36,10 @@ const login = async (req, res) => {
     const { email, username, password } = req.body;
     const identifier = (email || username || '').trim();
 
+    console.log(`Login attempt for identifier: "${identifier}"`);
+
     if (!identifier || !password) {
+      console.log('Login failed: Missing identifier or password');
       return res.status(400).json({ message: 'Email/username and password are required' });
     }
 
@@ -46,17 +49,22 @@ const login = async (req, res) => {
     );
     const user = userRow(users[0], true);
     if (!user) {
+      console.log(`Login failed: No user found for identifier "${identifier}"`);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     if (!user.isActive) {
+      console.log(`Login failed: Account deactivated for "${identifier}"`);
       return res.status(403).json({ message: 'Account deactivated by an administrator' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log(`Login failed: Password mismatch for "${identifier}"`);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    console.log(`Login successful for user: ${user.email} (ID: ${user.id})`);
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
