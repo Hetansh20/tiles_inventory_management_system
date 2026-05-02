@@ -164,15 +164,13 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
         <form className="grid gap-4" onSubmit={submit}>
           <Input label="Name" value={form.name} onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} />
           <Input label="Email" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} />
-          {(!editingUser || form.password) && (
-            <Input 
-              label={editingUser ? "Change Password (Optional)" : "Password"} 
-              type="password" 
-              value={form.password} 
-              onChange={(value) => setForm((prev) => ({ ...prev, password: value }))} 
-              required={!editingUser}
-            />
-          )}
+          <Input 
+            label={editingUser ? "Change Password (Optional)" : "Password"} 
+            type="password" 
+            value={form.password || ""} 
+            onChange={(value) => setForm((prev) => ({ ...prev, password: value }))} 
+            required={!editingUser}
+          />
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
             Role
             <select
