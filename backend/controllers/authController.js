@@ -33,9 +33,17 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
+    const identifier = (email || username || '').trim();
 
-    const users = await query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+    if (!identifier || !password) {
+      return res.status(400).json({ message: 'Email/username and password are required' });
+    }
+
+    const users = await query(
+      'SELECT * FROM users WHERE email = ? OR name = ? LIMIT 1',
+      [identifier, identifier]
+    );
     const user = userRow(users[0], true);
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
