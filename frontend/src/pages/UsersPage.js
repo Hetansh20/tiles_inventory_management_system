@@ -7,8 +7,9 @@ import PermissionBanner from "../components/PermissionBanner";
 import SearchBar from "../components/SearchBar";
 import StatusBadge from "../components/StatusBadge";
 import useDebounce from "../hooks/useDebounce";
+import { toast } from "react-toastify";
 
-const defaultForm = { name: "", email: "", password: "", role: "staff", isActive: true, permissions: [] };
+const defaultForm = { name: "", email: "", password: "", confirmPassword: "", role: "staff", isActive: true, permissions: [] };
 
 const availableModules = [
   { id: "inventory", label: "Record Stock Movements" },
@@ -103,13 +104,24 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
 
   const openEditModal = (user) => {
     setEditingUser(user);
-    setForm({ ...user, permissions: user.permissions || [] });
+    setForm({ ...user, password: "", confirmPassword: "", permissions: user.permissions || [] });
     setModalOpen(true);
   };
 
   const submit = (event) => {
     event.preventDefault();
-    saveUser({ ...form, id: editingUser?.id });
+    if (!editingUser && !form.password) {
+      toast.error("Password is required for new users");
+      return;
+    }
+
+    if (form.password && form.password !== form.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    const { confirmPassword: _confirmPassword, ...payload } = form;
+    saveUser({ ...payload, id: editingUser?.id });
     setModalOpen(false);
   };
 
@@ -163,16 +175,38 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
 
       <FormModal isOpen={isModalOpen} title={editingUser ? "Edit User" : "Add User"} onClose={() => setModalOpen(false)}>
         <form className="grid gap-4" onSubmit={submit}>
-          <label className="grid gap-1 text-sm font-semibold text-slate-700">
-            {editingUser ? "Change Password (Optional)" : "Password"}
-            <input
-              type="password"
-              required={!editingUser}
-              value={form.password || ""}
-              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all"
-            />
-          </label>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-slate-800">Password</p>
+              <p className="text-xs text-slate-500">
+                {editingUser ? "Leave blank to keep the current password." : "Set a temporary password for the new user."}
+              </p>
+            </div>
+            <div className="mt-3 grid gap-3">
+              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                {editingUser ? "New Password (Optional)" : "Password"}
+                <input
+                  type="password"
+                  required={!editingUser}
+                  autoComplete="new-password"
+                  value={form.password || ""}
+                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                Confirm Password
+                <input
+                  type="password"
+                  required={!editingUser}
+                  autoComplete="new-password"
+                  value={form.confirmPassword || ""}
+                  onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all"
+                />
+              </label>
+            </div>
+          </div>
           <Input label="Name" value={form.name} onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} />
           <Input label="Email" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} />
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
