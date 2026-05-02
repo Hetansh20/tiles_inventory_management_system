@@ -21,6 +21,7 @@ const availableModules = [
 ];
 
 export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }) {
+  console.log("UsersPage rendered - Version 2.0 (Password field at top)");
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
   const [isModalOpen, setModalOpen] = useState(false);
@@ -162,18 +163,18 @@ export default function UsersPage({ users, saveUser, toggleUserStatus, canEdit }
 
       <FormModal isOpen={isModalOpen} title={editingUser ? "Edit User" : "Add User"} onClose={() => setModalOpen(false)}>
         <form className="grid gap-4" onSubmit={submit}>
-          <Input label="Full Name (Test Update)" value={form.name} onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} />
-          <Input label="Email" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} />
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
             {editingUser ? "Change Password (Optional)" : "Password"}
             <input
               type="password"
+              required={!editingUser}
               value={form.password || ""}
               onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              required={!editingUser}
               className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all"
             />
           </label>
+          <Input label="Name" value={form.name} onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} />
+          <Input label="Email" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} />
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
             Role
             <select
